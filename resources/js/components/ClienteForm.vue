@@ -1,74 +1,244 @@
 <template>
-    <div class="card p-4">
-        <h3>{{ isEditing ? 'Editar Cliente' : 'Crear Nuevo Cliente' }}</h3>
+    <div class="container mt-4">
+        <div class="card p-4 shadow">
+            <h3 class="text-primary mb-4">
+                {{ isEditing ? 'Editar Cliente' : 'Crear Nuevo Cliente' }}
+            </h3>
 
-        <form @submit.prevent="submitForm">
-            <div class="mb-4">
-                <h4>Información Principal del Cliente</h4>
-                <div class="form-group mb-3">
-                    <label for="nombre_institucion">Nombre Institución:</label>
-                    <input type="text" class="form-control" id="nombre_institucion" v-model="form.nombre_institucion" required>
-                    <div v-if="errors.nombre_institucion" class="text-danger">{{ errors.nombre_institucion[0] }}</div>
-                </div>
-                <div class="form-group mb-3">
-                    <label for="rut">RUT:</label>
-                    <input type="text" class="form-control" id="rut" v-model="form.rut" required>
-                    <div v-if="errors.rut" class="text-danger">{{ errors.rut[0] }}</div>
-                </div>
-                <div class="form-group mb-3">
-                    <label for="tipo_cliente">Tipo de Cliente:</label>
-                    <select class="form-control" id="tipo_cliente" v-model="form.tipo_cliente" required>
-                        <option value="" disabled>Selecciona un tipo</option>
-                        <option value="Cliente Público">Cliente Público</option>
-                        <option value="Cliente Privado">Cliente Privado</option>
-                        <option value="Revendedor">Revendedor</option>
-                    </select>
-                    <div v-if="errors.tipo_cliente" class="text-danger">{{ errors.tipo_cliente[0] }}</div>
-                </div>
+            <!-- Mostrar errores generales -->
+            <div v-if="generalError" class="alert alert-danger">
+                {{ generalError }}
             </div>
 
-            <div class="mb-4">
-                <h4>Información de Contacto Principal</h4>
-                <div class="form-group mb-3">
-                    <label for="nombre_contacto">Nombre de Contacto:</label>
-                    <input type="text" class="form-control" id="nombre_contacto" v-model="form.nombre_contacto" required>
-                    <div v-if="errors.nombre_contacto" class="text-danger">{{ errors.nombre_contacto[0] }}</div>
-                </div>
-                <div class="form-group mb-3">
-                    <label for="email">Correo Electrónico:</label>
-                    <input type="email" class="form-control" id="email" v-model="form.email" required>
-                    <div v-if="errors.email" class="text-danger">{{ errors.email[0] }}</div>
-                </div>
-                <div class="form-group mb-3">
-                    <label for="telefono">Teléfono:</label>
-                    <input type="text" class="form-control" id="telefono" v-model="form.telefono">
-                    <div v-if="errors.telefono" class="text-danger">{{ errors.telefono[0] }}</div>
-                </div>
-                <div class="form-group mb-3">
-                    <label for="direccion">Dirección:</label>
-                    <textarea class="form-control" id="direccion" v-model="form.direccion"></textarea>
-                    <div v-if="errors.direccion" class="text-danger">{{ errors.direccion[0] }}</div>
-                </div>
+            <!-- Mostrar mensaje de éxito -->
+            <div v-if="successMessage" class="alert alert-success">
+                {{ successMessage }}
             </div>
 
-            <div class="mb-4">
-                <h4>Información Adicional y Asignaciones</h4>
-                <div class="form-group mb-3">
-                    <label for="vendedores_a_cargo">Vendedor(es) a Cargo (IDs):</label>
-                    <input type="text" class="form-control" id="vendedores_a_cargo" v-model="vendedoresInput">
-                    <small class="form-text text-muted">Ingrese IDs de vendedores separados por comas (ej. 1, 5, 10).</small>
-                    <div v-if="errors.vendedores_a_cargo" class="text-danger">{{ errors.vendedores_a_cargo[0] }}</div>
-                </div>
-                <div class="form-group mb-3">
-                    <label for="informacion_adicional">Información Adicional del Cliente:</label>
-                    <textarea class="form-control" id="informacion_adicional" v-model="form.informacion_adicional"></textarea>
-                    <div v-if="errors.informacion_adicional" class="text-danger">{{ errors.informacion_adicional[0] }}</div>
-                </div>
-            </div>
+            <form @submit.prevent="submitForm">
+                <!-- Información Principal del Cliente -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Información Principal del Cliente</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="nombre_institucion" class="form-label">
+                                        Nombre Institución <span class="text-danger">*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        :class="{'is-invalid': errors.nombre_institucion}"
+                                        id="nombre_institucion" 
+                                        v-model="form.nombre_institucion" 
+                                        required
+                                        placeholder="Ej: Hospital Regional de Santiago"
+                                    >
+                                    <div v-if="errors.nombre_institucion" class="invalid-feedback">
+                                        {{ errors.nombre_institucion[0] }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="rut" class="form-label">
+                                        RUT <span class="text-danger">*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        :class="{'is-invalid': errors.rut}"
+                                        id="rut" 
+                                        v-model="form.rut" 
+                                        required
+                                        placeholder="Ej: 12.345.678-9"
+                                    >
+                                    <div v-if="errors.rut" class="invalid-feedback">
+                                        {{ errors.rut[0] }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-            <button type="submit" class="btn btn-success me-2">{{ isEditing ? 'Guardar Cambios' : 'Crear Cliente' }}</button>
-            <button type="button" class="btn btn-secondary" @click="cancelar">Cancelar</button>
-        </form>
+                        <div class="form-group mb-3">
+                            <label for="tipo_cliente" class="form-label">
+                                Tipo de Cliente <span class="text-danger">*</span>
+                            </label>
+                            <select 
+                                class="form-control" 
+                                :class="{'is-invalid': errors.tipo_cliente}"
+                                id="tipo_cliente" 
+                                v-model="form.tipo_cliente" 
+                                required
+                            >
+                                <option value="" disabled>Selecciona un tipo</option>
+                                <option value="Cliente Público">Cliente Público</option>
+                                <option value="Cliente Privado">Cliente Privado</option>
+                                <option value="Revendedor">Revendedor</option>
+                            </select>
+                            <div v-if="errors.tipo_cliente" class="invalid-feedback">
+                                {{ errors.tipo_cliente[0] }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información de Contacto Principal -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Información de Contacto Principal</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="nombre_contacto" class="form-label">
+                                        Nombre de Contacto <span class="text-danger">*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        :class="{'is-invalid': errors.nombre_contacto}"
+                                        id="nombre_contacto" 
+                                        v-model="form.nombre_contacto" 
+                                        required
+                                        placeholder="Ej: María González"
+                                    >
+                                    <div v-if="errors.nombre_contacto" class="invalid-feedback">
+                                        {{ errors.nombre_contacto[0] }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="email" class="form-label">
+                                        Correo Electrónico <span class="text-danger">*</span>
+                                    </label>
+                                    <input 
+                                        type="email" 
+                                        class="form-control" 
+                                        :class="{'is-invalid': errors.email}"
+                                        id="email" 
+                                        v-model="form.email" 
+                                        required
+                                        placeholder="Ej: maria.gonzalez@hospital.cl"
+                                    >
+                                    <div v-if="errors.email" class="invalid-feedback">
+                                        {{ errors.email[0] }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="telefono" class="form-label">Teléfono</label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        :class="{'is-invalid': errors.telefono}"
+                                        id="telefono" 
+                                        v-model="form.telefono"
+                                        placeholder="Ej: +56 9 1234 5678"
+                                    >
+                                    <div v-if="errors.telefono" class="invalid-feedback">
+                                        {{ errors.telefono[0] }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="direccion" class="form-label">Dirección</label>
+                            <textarea 
+                                class="form-control" 
+                                :class="{'is-invalid': errors.direccion}"
+                                id="direccion" 
+                                v-model="form.direccion"
+                                rows="3"
+                                placeholder="Ej: Av. Libertador Bernardo O'Higgins 1234, Santiago"
+                            ></textarea>
+                            <div v-if="errors.direccion" class="invalid-feedback">
+                                {{ errors.direccion[0] }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información Adicional y Asignaciones -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Información Adicional y Asignaciones</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label for="vendedores_a_cargo" class="form-label">
+                                Vendedor(es) a Cargo
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                :class="{'is-invalid': errors.vendedores_a_cargo}"
+                                id="vendedores_a_cargo" 
+                                v-model="vendedoresInput"
+                                placeholder="Ej: Juan Pérez, María Silva"
+                            >
+                            <small class="form-text text-muted">
+                                Ingrese nombres de vendedores separados por comas.
+                            </small>
+                            <div v-if="errors.vendedores_a_cargo" class="invalid-feedback">
+                                {{ errors.vendedores_a_cargo[0] }}
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="informacion_adicional" class="form-label">
+                                Información Adicional del Cliente
+                            </label>
+                            <textarea 
+                                class="form-control" 
+                                :class="{'is-invalid': errors.informacion_adicional}"
+                                id="informacion_adicional" 
+                                v-model="form.informacion_adicional"
+                                rows="4"
+                                placeholder="Información relevante sobre el cliente, preferencias, historial, etc."
+                            ></textarea>
+                            <div v-if="errors.informacion_adicional" class="invalid-feedback">
+                                {{ errors.informacion_adicional[0] }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="d-flex justify-content-between">
+                    <button 
+                        type="button" 
+                        class="btn btn-secondary" 
+                        @click="cancelar"
+                        :disabled="isSubmitting"
+                    >
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    
+                    <button 
+                        type="submit" 
+                        class="btn btn-success" 
+                        :disabled="isSubmitting"
+                    >
+                        <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+                        <i v-else class="fas fa-save"></i>
+                        {{ isSubmitting ? 'Guardando...' : (isEditing ? 'Actualizar Cliente' : 'Crear Cliente') }}
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </template>
 
@@ -76,6 +246,7 @@
 import axios from 'axios';
 
 export default {
+    name: 'ClienteForm',
     props: {
         initialCliente: {
             type: Object,
@@ -88,7 +259,7 @@ export default {
                 nombre_institucion: '',
                 rut: '',
                 tipo_cliente: '',
-                nombre_contacto: '', // Este campo no estaba en la migración de la tabla cliente, pero en el frontend es importante.
+                nombre_contacto: '',
                 email: '',
                 telefono: '',
                 direccion: '',
@@ -96,59 +267,112 @@ export default {
                 informacion_adicional: '',
             },
             errors: {},
+            generalError: '',
+            successMessage: '',
             isEditing: false,
-            vendedoresInput: '', // Para manejar el input de vendedores separados por coma
+            isSubmitting: false,
+            vendedoresInput: '', // Para manejar el input de vendedores
         };
     },
     created() {
-        if (this.initialCliente) {
-            this.isEditing = true;
-            this.form = { ...this.initialCliente };
-            // Si vendedores_a_cargo llega como array, conviértelo a string para el input
-            if (Array.isArray(this.form.vendedores_a_cargo)) {
-                this.vendedoresInput = this.form.vendedores_a_cargo.join(', ');
-            }
-        }
+        this.initializeForm();
     },
     methods: {
-        async submitForm() {
-            this.errors = {}; // Limpiar errores previos
+        initializeForm() {
+            if (this.initialCliente) {
+                this.isEditing = true;
+                this.form = { ...this.initialCliente };
+                
+                // Convertir array de vendedores a string
+                if (Array.isArray(this.form.vendedores_a_cargo)) {
+                    this.vendedoresInput = this.form.vendedores_a_cargo.join(', ');
+                } else if (this.form.vendedores_a_cargo) {
+                    this.vendedoresInput = this.form.vendedores_a_cargo;
+                }
+            }
+        },
 
-            // Convertir la cadena de vendedores a un array de IDs
+        async submitForm() {
+            // Limpiar estados previos
+            this.errors = {};
+            this.generalError = '';
+            this.successMessage = '';
+            this.isSubmitting = true;
+
+            // Procesar vendedores
             this.form.vendedores_a_cargo = this.vendedoresInput
                 .split(',')
-                .map(id => id.trim())
-                .filter(id => id !== ''); // Eliminar cadenas vacías
+                .map(vendedor => vendedor.trim())
+                .filter(vendedor => vendedor !== '');
 
             try {
                 const url = this.isEditing
-                    ? `/api/clientes/${this.initialCliente.id}` // Para edición
-                    : '/api/clientes'; // Para creación
+                    ? `/api/clientes/${this.initialCliente.id}`
+                    : '/api/clientes';
 
                 const method = this.isEditing ? 'put' : 'post';
 
                 const response = await axios[method](url, this.form);
 
-                alert(`Cliente ${this.isEditing ? 'actualizado' : 'creado'} exitosamente!`);
-                // Redirigir a la lista de clientes o hacer algo más
-                window.location.href = '/clientes'; // Ejemplo de redirección
+                this.successMessage = response.data.message;
+                
+                // Redirigir después de un breve delay
+                setTimeout(() => {
+                    window.location.href = '/clientes';
+                }, 1500);
+
             } catch (error) {
-                if (error.response && error.response.status === 422) {
-                    this.errors = error.response.data.errors;
-                    alert('Por favor, corrige los errores del formulario.');
+                if (error.response?.status === 422) {
+                    this.errors = error.response.data.errors || {};
+                    this.generalError = 'Por favor, corrige los errores del formulario.';
                 } else {
                     console.error('Error al guardar el cliente:', error);
-                    alert('Hubo un error al guardar el cliente.');
+                    this.generalError = error.response?.data?.message || 'Hubo un error al guardar el cliente.';
                 }
+            } finally {
+                this.isSubmitting = false;
             }
         },
+
         cancelar() {
-            window.location.href = '/clientes'; // Redirigir o emitir un evento para cerrar el formulario
+            if (confirm('¿Estás seguro de que quieres cancelar? Los cambios no guardados se perderán.')) {
+                window.location.href = '/clientes';
+            }
         }
     }
 };
 </script>
 
 <style scoped>
-/* Puedes añadir estilos específicos aquí si es necesario */
+.card-header h5 {
+    margin: 0;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.btn {
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-weight: 500;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+.alert {
+    border-radius: 5px;
+}
+
+.shadow {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
 </style>

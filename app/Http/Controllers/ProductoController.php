@@ -106,4 +106,31 @@ class ProductoController extends Controller
         return redirect()->route('productos.index')
                          ->with('success', 'Producto eliminado exitosamente.');
     }
+
+    public function buscarProductos(Request $request)
+{
+    $query = $request->input('q', '');
+
+    if (empty($query)) {
+        return response()->json([]);
+    }
+
+    $productos = Producto::where('estado', 'Activo')
+        ->where(function($q) use ($query) {
+            $q->where('nombre', 'like', '%' . $query . '%')
+              ->orWhere('categoria', 'like', '%' . $query . '%')
+              ->orWhere('descripcion', 'like', '%' . $query . '%');
+        })
+        ->orderBy('nombre')
+        ->limit(10)
+        ->get([
+            'id',
+            'nombre',
+            'categoria',
+            'precio_neto',
+            'descripcion'
+        ]);
+
+    return response()->json($productos);
+}
 }

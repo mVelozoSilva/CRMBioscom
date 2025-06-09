@@ -1,27 +1,49 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController; // Importa DashboardController
-use App\Http\Controllers\ClienteController;   // Importa ClienteController
-use App\Http\Controllers\ProductoController; // Importa ProductoController
-use App\Http\Controllers\CotizacionController; // Importa CotizacionController
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\CotizacionController;
+use App\Http\Controllers\SeguimientoController; // ← AGREGAR ESTA LÍNEA
 
-// --- Rutas del Dashboard ---
-// Ruta principal conectada a DashboardController
+/*
+|--------------------------------------------------------------------------
+| Web Routes - Rutas para vistas Blade
+|--------------------------------------------------------------------------
+*/
+
+// --- Ruta principal (Dashboard) ---
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-// --- Rutas de Clientes (CRUD) ---
-// Esta línea crea todas las rutas CRUD para el recurso 'clientes'
+// --- Rutas para Clientes (CRUD completo) ---
 Route::resource('clientes', ClienteController::class);
 
-// --- Rutas de Productos (CRUD) ---
-// Esta línea crea todas las rutas CRUD para el recurso 'productos'
+// --- Rutas para Productos (CRUD completo) ---
 Route::resource('productos', ProductoController::class);
 
-// --- Rutas de Cotizaciones (CRUD) ---
-Route::resource('cotizaciones', CotizacionController::class); // Esta línea crea todas las rutas CRUD para el recurso 'cotizaciones'
+// --- Rutas para Cotizaciones (CRUD completo) ---
+Route::resource('cotizaciones', CotizacionController::class);
 
-Route::put('/cotizaciones/{cotizacion}', function ($cotizacionId) {
-    // Log::info('Petición PUT a cotizaciones/{id} capturada en routes/web.php. ID:', [$cotizacionId]); // Puedes usar Log::info si prefieres
-    dd('Petición PUT a cotizaciones/{id} capturada en routes/web.php. ID: ' . $cotizacionId);
-})->name('cotizaciones.update_debug'); // Le damos un nombre temporal por si acaso
+// --- Rutas del módulo de seguimiento ---
+Route::prefix('seguimiento')->name('seguimiento.')->group(function () {
+    Route::get('/', [SeguimientoController::class, 'index'])->name('index');
+    Route::post('/', [SeguimientoController::class, 'store'])->name('store');
+    Route::put('/{seguimiento}', [SeguimientoController::class, 'update'])->name('update');
+    Route::delete('/{seguimiento}', [SeguimientoController::class, 'destroy'])->name('destroy');
+    Route::post('/update-masivo', [SeguimientoController::class, 'updateMasivo'])->name('update-masivo');
+    Route::post('/importar', [SeguimientoController::class, 'importar'])->name('importar');
+});
+
+// --- Rutas adicionales para búsquedas (usadas por Vue.js) ---
+// Buscar clientes (autocompletado en cotizaciones)
+Route::get('/api/buscar-clientes', [ClienteController::class, 'buscarClientes'])->name('buscar.clientes');
+
+// Buscar productos (autocompletado en cotizaciones)  
+Route::get('/api/buscar-productos', [ProductoController::class, 'buscarProductos'])->name('buscar.productos');
+
+// Obtener cliente específico con datos completos
+Route::get('/api/cliente/{cliente}', [ClienteController::class, 'show'])->name('api.cliente.show');
+
+// Obtener producto específico con datos completos
+Route::get('/api/producto/{producto}', [ProductoController::class, 'show'])->name('api.producto.show');
