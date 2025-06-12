@@ -1,11 +1,230 @@
-@import 'tailwindcss';
+/* resources/css/app.css */
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+/* Directivas base de Tailwind CSS v4 */
+@import "tailwindcss";
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+/* Definición de variables CSS de Bioscom, accesibles globalmente */
+:root {
+    /* Colores Corporativos */
+    --bioscom-primary: #6284b8;
+    --bioscom-secondary: #5f87b8;
+    --bioscom-accent: #00334e;
+    --bioscom-background: #f3f6fa;
+    --bioscom-text-primary: #00334e;
+
+    /* Colores Funcionales / Estados de Seguimiento */
+    --bioscom-success: #28a745;
+    --bioscom-warning: #ffc107;
+    --bioscom-error: #dc3545;
+    --bioscom-info: #17a2b8;
+    --bioscom-neutral: #6c757d; /* Gris para completado/reprogramado */
+
+    /* Escala de Grises */
+    --bioscom-gray-50: #f9fafb;
+    --bioscom-gray-100: #f3f4f6;
+    --bioscom-gray-200: #e5e7eb;
+    --bioscom-gray-300: #d1d5db;
+    --bioscom-gray-400: #9ca3af;
+    --bioscom-gray-500: #6b7280;
+    --bioscom-gray-600: #4b5563;
+    --bioscom-gray-700: #374151;
+    --bioscom-gray-800: #1f2937;
+    --bioscom-gray-900: #111827;
+
+    /* Tipografía */
+    --bioscom-font-primary: 'Inter', sans-serif;
+    --bioscom-font-secondary: 'Georgia', serif;
+
+    /* Border Radius */
+    --bioscom-border-radius: 0.5rem; /* 8px */
+
+    /* Espaciado */
+    --bioscom-space-xs: 0.25rem;
+    --bioscom-space-sm: 0.5rem;
+    --bioscom-space-md: 1rem;
+    --bioscom-space-lg: 1.5rem;
+    --bioscom-space-xl: 2rem;
+    --bioscom-space-2xl: 3rem;
+}
+
+/* Estilos base del body, aplicando las variables CSS */
+body {
+    font-family: var(--bioscom-font-primary);
+    background-color: var(--bioscom-background);
+    color: var(--bioscom-text-primary);
+}
+
+/* Clases personalizadas para componentes - SIN @apply que cause problemas */
+.btn-bioscom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-bioscom-primary {
+    background-color: var(--bioscom-primary);
+    color: white;
+    border: 1px solid var(--bioscom-primary);
+}
+
+.btn-bioscom-primary:hover {
+    background-color: #557299;
+    border-color: #557299;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(98, 132, 184, 0.3);
+}
+
+.btn-bioscom-secondary {
+    background-color: var(--bioscom-secondary);
+    color: white;
+    border: 1px solid var(--bioscom-secondary);
+}
+
+.btn-bioscom-secondary:hover {
+    background-color: #4a6b94;
+    border-color: #4a6b94;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(95, 135, 184, 0.3);
+}
+
+.btn-bioscom-outline {
+    background-color: transparent;
+    border: 1px solid var(--bioscom-gray-300);
+    color: var(--bioscom-gray-600);
+}
+
+.btn-bioscom-outline:hover {
+    background-color: var(--bioscom-background);
+    border-color: var(--bioscom-primary);
+    color: var(--bioscom-primary);
+}
+
+.card-bioscom {
+    background: white;
+    border: 1px solid var(--bioscom-gray-200);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.card-bioscom:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.input-bioscom {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--bioscom-gray-300);
+    border-radius: var(--bioscom-border-radius);
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.input-bioscom:focus {
+    border-color: var(--bioscom-primary);
+    box-shadow: 0 0 0 2px rgba(98, 132, 184, 0.2);
+}
+
+.badge-bioscom-primary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: rgba(98, 132, 184, 0.1);
+    color: var(--bioscom-primary);
+}
+
+.badge-bioscom-secondary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: var(--bioscom-gray-100);
+    color: var(--bioscom-gray-600);
+}
+
+/* Estados específicos de seguimiento */
+.status-pendiente {
+    background-color: #fef3c7;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+}
+
+.status-en-proceso {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-left: 4px solid #3b82f6;
+}
+
+.status-completado {
+    background-color: #d1fae5;
+    color: #065f46;
+    border-left: 4px solid #10b981;
+}
+
+.status-vencido {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-left: 4px solid #ef4444;
+}
+
+.status-archivado {
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border-left: 4px solid #6b7280;
+}
+
+/* Prioridades */
+.priority-baja { color: #6b7280; }
+.priority-media { color: #3b82f6; }
+.priority-alta { color: #f59e0b; }
+.priority-urgente { color: #ef4444; font-weight: 600; }
+
+/* Utilidades personalizadas */
+.transition-all {
+    transition: all 0.2s ease-in-out;
+}
+
+.shadow-bioscom {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-bioscom-hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.text-bioscom-primary {
+    color: var(--bioscom-primary);
+}
+
+.text-bioscom-secondary {
+    color: var(--bioscom-secondary);
+}
+
+.bg-bioscom-primary {
+    background-color: var(--bioscom-primary);
+}
+
+.bg-bioscom-secondary {
+    background-color: var(--bioscom-secondary);
+}
+
+.border-bioscom-primary {
+    border-color: var(--bioscom-primary);
 }

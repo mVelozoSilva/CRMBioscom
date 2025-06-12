@@ -1,101 +1,243 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <!-- Header -->
-    <div class="mb-6">
-      <div class="flex justify-between items-center mb-4">
-        <h1 class="text-3xl font-bold text-gray-900 flex items-center">
-          <i class="fas fa-tasks text-blue-600 mr-3"></i>
-          Módulo de Seguimiento
-        </h1>
-        <div class="flex space-x-3">
-          <button 
-            @click="abrirModalNuevo" 
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+  <div class="seguimiento-container">
+    <!-- BARRA DE HERRAMIENTAS -->
+    <div class="bg-white shadow-sm border-b border-gray-200 p-4">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        
+        <!-- FILTROS RÁPIDOS (CRÍTICOS) -->
+        <div class="flex flex-wrap gap-2">
+          <button
+            @click="aplicarFiltroRapido('atrasados')"
+            :class="['btn-filter', filtroActivo === 'atrasados' ? 'btn-filter-active bg-red-100 text-red-700 border-red-300' : 'hover:bg-red-50']"
           >
-            <i class="fas fa-plus mr-2"></i> Nuevo Seguimiento
+            <i class="fas fa-exclamation-triangle mr-1"></i>
+            Atrasados ({{ estadisticas.atrasados || 0 }})
           </button>
-          <button 
-            @click="abrirModalImportar" 
-            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+          
+          <button
+            @click="aplicarFiltroRapido('proximos')"
+            :class="['btn-filter', filtroActivo === 'proximos' ? 'btn-filter-active bg-yellow-100 text-yellow-700 border-yellow-300' : 'hover:bg-yellow-50']"
           >
-            <i class="fas fa-file-excel mr-2"></i> Importar Excel
+            <i class="fas fa-clock mr-1"></i>
+            Próximos 7 días ({{ estadisticas.proximos_7_dias || 0 }})
+          </button>
+          
+          <button
+            @click="aplicarFiltroRapido('hoy')"
+            :class="['btn-filter', filtroActivo === 'hoy' ? 'btn-filter-active bg-blue-100 text-blue-700 border-blue-300' : 'hover:bg-blue-50']"
+          >
+            <i class="fas fa-calendar-day mr-1"></i>
+            Hoy ({{ estadisticas.hoy || 0 }})
+          </button>
+          
+          <button
+            @click="aplicarFiltroRapido('todos')"
+            :class="['btn-filter', filtroActivo === 'todos' ? 'btn-filter-active bg-green-100 text-green-700 border-green-300' : 'hover:bg-green-50']"
+          >
+            <i class="fas fa-list mr-1"></i>
+            Todos ({{ estadisticas.total_activos || 0 }})
+          </button>
+
+          <button
+            @click="aplicarFiltroRapido('completados_hoy')"
+            :class="['btn-filter', filtroActivo === 'completados_hoy' ? 'btn-filter-active bg-purple-100 text-purple-700 border-purple-300' : 'hover:bg-purple-50']"
+          >
+            <i class="fas fa-check-circle mr-1"></i>
+            Completados Hoy ({{ estadisticas.completados_hoy || 0 }})
+          </button>
+        </div>
+
+        <!-- ACCIONES PRINCIPALES -->
+        <div class="flex gap-2">
+          <button
+            @click="mostrarModalCrear = true"
+            class="btn-primary"
+          >
+            <i class="fas fa-plus mr-1"></i>
+            Nuevo Seguimiento
+          </button>
+          
+          <button
+            @click="actualizarMasivo"
+            :disabled="seguimientosSeleccionados.length === 0"
+            :class="['btn-secondary', seguimientosSeleccionados.length === 0 ? 'opacity-50 cursor-not-allowed' : '']"
+          >
+            <i class="fas fa-edit mr-1"></i>
+            Actualizar Seleccionados ({{ seguimientosSeleccionados.length }})
+          </button>
+          
+          <button
+            @click="mostrarModalImportar = true"
+            class="btn-outline"
+            v-if="puedeImportar"
+          >
+            <i class="fas fa-upload mr-1"></i>
+            Importar Excel
           </button>
         </div>
       </div>
 
-      <!-- Estadísticas -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white p-6 rounded-lg shadow border border-red-200">
-          <div class="text-center">
-            <h3 class="text-lg font-semibold text-red-600 mb-2">Atrasados</h3>
-            <p class="text-3xl font-bold text-red-600">{{ estadisticas.atrasados }}</p>
+      <!-- FILTROS AVANZADOS -->
+      <div class="mt-4 flex flex-col lg:flex-row gap-4">
+        <!-- Búsqueda rápida -->
+        <div class="flex-1">
+          <div class="relative">
+            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            <input
+              v-model="filtros.busqueda"
+              @input="buscarConRetraso"
+              type="text"
+              placeholder="Buscar por cliente, RUT o cotización..."
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
           </div>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow border border-yellow-200">
-          <div class="text-center">
-            <h3 class="text-lg font-semibold text-yellow-600 mb-2">Próximos 7 días</h3>
-            <p class="text-3xl font-bold text-yellow-600">{{ estadisticas.proximos }}</p>
-          </div>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow border border-green-200">
-          <div class="text-center">
-            <h3 class="text-lg font-semibold text-green-600 mb-2">Completados Hoy</h3>
-            <p class="text-3xl font-bold text-green-600">{{ estadisticas.completados_hoy }}</p>
-          </div>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow border border-blue-200">
-          <div class="text-center">
-            <h3 class="text-lg font-semibold text-blue-600 mb-2">Total</h3>
-            <p class="text-3xl font-bold text-blue-600">{{ estadisticas.total }}</p>
-          </div>
+
+        <!-- Filtros adicionales -->
+        <div class="flex gap-2">
+          <select v-model="filtros.vendedor" @change="aplicarFiltros" class="form-select">
+            <option value="">Todos los vendedores</option>
+            <option 
+              v-for="vendedor in vendedores" 
+              :key="vendedor.id" 
+              :value="vendedor.id"
+            >
+              {{ vendedor.name }}
+            </option>
+          </select>
+
+          <select v-model="filtros.estado" @change="aplicarFiltros" class="form-select">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="en_proceso">En Proceso</option>
+            <option value="completado">Completado</option>
+            <option value="vencido">Vencido</option>
+            <option value="reprogramado">Reprogramado</option>
+          </select>
+
+          <select v-model="filtros.prioridad" @change="aplicarFiltros" class="form-select">
+            <option value="">Todas las prioridades</option>
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+
+          <button @click="limpiarFiltros" class="btn-outline">
+            <i class="fas fa-times mr-1"></i>
+            Limpiar
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Filtros y selección múltiple -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      <div class="space-y-4">
-        <!-- Filtros rápidos -->
-        <div class="flex flex-wrap gap-2">
-          <button 
-            @click="aplicarFiltro('atrasados')"
-            :class="filtroActivo === 'atrasados' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-600 hover:bg-red-200'"
-            class="px-4 py-2 rounded-lg flex items-center transition-colors"
-          >
-            <i class="fas fa-exclamation-triangle mr-2"></i> Atrasados
-          </button>
-          <button 
-            @click="aplicarFiltro('proximos')"
-            :class="filtroActivo === 'proximos' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'"
-            class="px-4 py-2 rounded-lg flex items-center transition-colors"
-          >
-            <i class="fas fa-clock mr-2"></i> Próximos 7 días
-          </button>
-          <button 
-            @click="aplicarFiltro('todos')"
-            :class="filtroActivo === 'todos' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'"
-            class="px-4 py-2 rounded-lg flex items-center transition-colors"
-          >
-            <i class="fas fa-list mr-2"></i> Todos
-          </button>
+    <!-- TABLA PRINCIPAL - TIPO EXCEL EDITABLE -->
+    <div class="bg-white shadow overflow-hidden">
+      <!-- Loading Overlay -->
+      <div v-if="cargando" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+        <div class="flex items-center">
+          <i class="fas fa-spinner fa-spin text-blue-500 mr-2"></i>
+          Cargando seguimientos...
         </div>
+      </div>
 
-        <!-- Filtros adicionales -->
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <!-- Encabezados de tabla -->
+      <div class="bg-gray-50 border-b border-gray-200">
+        <div class="grid grid-cols-12 gap-2 p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
           <div class="col-span-1">
-            <label class="block text-sm font-medium text-gray-700">Vendedor</label>
-            <select v-model="filtros.vendedor_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" @change="cargarSeguimientos">
-              <option value="">Todos los vendedores</option>
-              <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
-                {{ vendedor.name }}
-              </option>
-            </select>
+            <input 
+              type="checkbox" 
+              v-model="todosMarcados" 
+              @change="toggleTodos"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            >
+          </div>
+          <div class="col-span-2 cursor-pointer hover:text-gray-700" @click="ordenar('cliente')">
+            Cliente 
+            <i :class="getIconoOrden('cliente')" class="ml-1"></i>
+          </div>
+          <div class="col-span-1 cursor-pointer hover:text-gray-700" @click="ordenar('cotizacion')">
+            Cotización
+            <i :class="getIconoOrden('cotizacion')" class="ml-1"></i>
+          </div>
+          <div class="col-span-1 cursor-pointer hover:text-gray-700" @click="ordenar('vendedor')">
+            Vendedor
+            <i :class="getIconoOrden('vendedor')" class="ml-1"></i>
+          </div>
+          <div class="col-span-1 cursor-pointer hover:text-gray-700" @click="ordenar('estado')">
+            Estado
+            <i :class="getIconoOrden('estado')" class="ml-1"></i>
+          </div>
+          <div class="col-span-1 cursor-pointer hover:text-gray-700" @click="ordenar('prioridad')">
+            Prioridad
+            <i :class="getIconoOrden('prioridad')" class="ml-1"></i>
+          </div>
+          <div class="col-span-1 cursor-pointer hover:text-gray-700" @click="ordenar('ultima_gestion')">
+            Últ. Gestión
+            <i :class="getIconoOrden('ultima_gestion')" class="ml-1"></i>
+          </div>
+          <div class="col-span-1 cursor-pointer hover:text-gray-700" @click="ordenar('proxima_gestion')">
+            Próx. Gestión
+            <i :class="getIconoOrden('proxima_gestion')" class="ml-1"></i>
+          </div>
+          <div class="col-span-2">Notas</div>
+          <div class="col-span-1">Acciones</div>
+        </div>
+      </div>
+
+      <!-- Filas de datos -->
+      <div class="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+        <div 
+          v-for="seguimiento in seguimientos" 
+          :key="seguimiento.id"
+          :class="[
+            'grid grid-cols-12 gap-2 p-3 hover:bg-gray-50 transition-colors',
+            getClaseFilaSeguimiento(seguimiento)
+          ]"
+        >
+          <!-- Checkbox -->
+          <div class="col-span-1 flex items-center">
+            <input 
+              type="checkbox" 
+              :value="seguimiento.id" 
+              v-model="seguimientosSeleccionados"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            >
           </div>
 
+          <!-- Cliente -->
+          <div class="col-span-2">
+            <div class="text-sm font-medium text-gray-900">
+              {{ seguimiento.cliente }}
+            </div>
+            <div class="text-xs text-gray-500" v-if="seguimiento.rut_cliente">
+              {{ seguimiento.rut_cliente }}
+            </div>
+          </div>
+
+          <!-- Cotización -->
           <div class="col-span-1">
-            <label class="block text-sm font-medium text-gray-700">Estado</label>
-            <select v-model="filtros.estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" @change="cargarSeguimientos">
-              <option value="">Todos</option>
+            <span class="text-sm text-blue-600 hover:text-blue-800 cursor-pointer" 
+                  @click="verCotizacion(seguimiento.cotizacion)">
+              {{ seguimiento.cotizacion || 'Sin cotización' }}
+            </span>
+          </div>
+
+          <!-- Vendedor -->
+          <div class="col-span-1">
+            <div class="text-sm text-gray-900">{{ seguimiento.vendedor }}</div>
+          </div>
+
+          <!-- Estado (EDITABLE) -->
+          <div class="col-span-1">
+            <select 
+              :value="seguimiento.estado"
+              @change="actualizarCampo(seguimiento.id, 'estado', $event.target.value)"
+              :class="[
+                'text-xs px-2 py-1 rounded border-0 focus:ring-2 focus:ring-blue-500',
+                getClaseEstado(seguimiento.estado)
+              ]"
+            >
               <option value="pendiente">Pendiente</option>
               <option value="en_proceso">En Proceso</option>
               <option value="completado">Completado</option>
@@ -104,10 +246,16 @@
             </select>
           </div>
 
+          <!-- Prioridad (EDITABLE) -->
           <div class="col-span-1">
-            <label class="block text-sm font-medium text-gray-700">Prioridad</label>
-            <select v-model="filtros.prioridad" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" @change="cargarSeguimientos">
-              <option value="">Todas</option>
+            <select 
+              :value="seguimiento.prioridad"
+              @change="actualizarCampo(seguimiento.id, 'prioridad', $event.target.value)"
+              :class="[
+                'text-xs px-2 py-1 rounded border-0 focus:ring-2 focus:ring-blue-500',
+                getClasePrioridad(seguimiento.prioridad)
+              ]"
+            >
               <option value="baja">Baja</option>
               <option value="media">Media</option>
               <option value="alta">Alta</option>
@@ -115,235 +263,154 @@
             </select>
           </div>
 
+          <!-- Última Gestión -->
           <div class="col-span-1">
-            <label class="block text-sm font-medium text-gray-700">Buscar Cliente</label>
-            <input 
-              type="text" 
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" 
-              v-model="filtros.buscar_cliente" 
-              @input="buscarClienteConRetraso"
-              placeholder="Nombre o RUT del cliente"
-            >
+            <span class="text-xs text-gray-600">
+              {{ seguimiento.ultima_gestion || 'Sin gestión' }}
+            </span>
           </div>
 
-          <div class="col-span-1 flex items-end">
-            <button @click="limpiarFiltros" class="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors">
-              <i class="fas fa-broom mr-2"></i> Limpiar
+          <!-- Próxima Gestión (EDITABLE) -->
+          <div class="col-span-1">
+            <input 
+              type="date"
+              :value="seguimiento.proxima_gestion"
+              @change="actualizarCampo(seguimiento.id, 'proxima_gestion', $event.target.value)"
+              class="text-xs px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 w-full"
+            >
+            <div v-if="seguimiento.dias_atraso > 0" class="text-xs text-red-600 mt-1">
+              {{ seguimiento.dias_atraso }} día(s) atrasado
+            </div>
+          </div>
+
+          <!-- Notas (EDITABLE) -->
+          <div class="col-span-2">
+            <textarea 
+              :value="seguimiento.notas"
+              @blur="actualizarCampo(seguimiento.id, 'notas', $event.target.value)"
+              placeholder="Agregar notas..."
+              class="text-xs p-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 w-full resize-none"
+              rows="2"
+            ></textarea>
+          </div>
+
+          <!-- Acciones -->
+          <div class="col-span-1 flex items-center gap-1">
+            <button 
+              @click="verDetalle(seguimiento)"
+              class="p-1 text-blue-600 hover:text-blue-800"
+              title="Ver detalle"
+            >
+              <i class="fas fa-eye text-xs"></i>
+            </button>
+            <button 
+              @click="editarSeguimiento(seguimiento)"
+              class="p-1 text-green-600 hover:text-green-800"
+              title="Editar"
+            >
+              <i class="fas fa-edit text-xs"></i>
+            </button>
+            <button 
+              @click="eliminarSeguimiento(seguimiento.id)"
+              class="p-1 text-red-600 hover:text-red-800"
+              title="Eliminar"
+            >
+              <i class="fas fa-trash text-xs"></i>
             </button>
           </div>
         </div>
+      </div>
 
-        <!-- Selección múltiple y acciones -->
-        <div v-if="seguimientosSeleccionados.length > 0" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <div class="flex justify-between items-center">
-            <span class="text-blue-700 flex items-center">
-              <i class="fas fa-check-square mr-2"></i>
-              {{ seguimientosSeleccionados.length }} seguimiento(s) seleccionado(s)
-            </span>
-            <div class="flex space-x-2">
-              <button @click="abrirModalUpdateMasivo" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm transition-colors">
-                <i class="fas fa-edit mr-1"></i> Actualizar Seleccionados
+      <!-- Sin resultados -->
+      <div v-if="!cargando && seguimientos.length === 0" class="text-center py-12">
+        <i class="fas fa-search text-gray-400 text-4xl mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No se encontraron seguimientos</h3>
+        <p class="text-gray-500">Intenta ajustar los filtros o crear un nuevo seguimiento</p>
+      </div>
+    </div>
+
+    <!-- PAGINACIÓN -->
+    <div v-if="pagination.total > 0" class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+      <div class="flex items-center justify-between">
+        <div class="flex-1 flex justify-between sm:hidden">
+          <button 
+            @click="cambiarPagina(pagination.current_page - 1)"
+            :disabled="pagination.current_page <= 1"
+            class="btn-outline"
+          >
+            Anterior
+          </button>
+          <button 
+            @click="cambiarPagina(pagination.current_page + 1)"
+            :disabled="pagination.current_page >= pagination.last_page"
+            class="btn-outline"
+          >
+            Siguiente
+          </button>
+        </div>
+        
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm text-gray-700">
+              Mostrando 
+              <span class="font-medium">{{ (pagination.current_page - 1) * pagination.per_page + 1 }}</span>
+              a 
+              <span class="font-medium">{{ Math.min(pagination.current_page * pagination.per_page, pagination.total) }}</span>
+              de 
+              <span class="font-medium">{{ pagination.total }}</span>
+              resultados
+            </p>
+          </div>
+          
+          <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+              <button 
+                @click="cambiarPagina(pagination.current_page - 1)"
+                :disabled="pagination.current_page <= 1"
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              >
+                <i class="fas fa-chevron-left"></i>
               </button>
-              <button @click="deseleccionarTodos" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition-colors">
-                <i class="fas fa-times mr-1"></i> Deseleccionar
+              
+              <button 
+                v-for="pagina in paginas"
+                :key="pagina"
+                @click="cambiarPagina(pagina)"
+                :class="[
+                  'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
+                  pagina === pagination.current_page 
+                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                ]"
+              >
+                {{ pagina }}
               </button>
-            </div>
+              
+              <button 
+                @click="cambiarPagina(pagination.current_page + 1)"
+                :disabled="pagination.current_page >= pagination.last_page"
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              >
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </nav>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="cargando" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      <p class="mt-4 text-gray-600">Cargando seguimientos...</p>
-    </div>
-
-    <!-- Tabla con edición en línea -->
-    <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-          <i class="fas fa-table mr-2"></i> 
-          Lista de Seguimientos ({{ paginacion.total }} registros)
-        </h2>
-        <button @click="cargarSeguimientos" class="text-blue-600 hover:text-blue-700 flex items-center transition-colors">
-          <i class="fas fa-refresh mr-1"></i> Actualizar
-        </button>
-      </div>
-      
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-                <input 
-                  type="checkbox" 
-                  class="form-check-input"
-                  :checked="todosMarcados"
-                  @change="toggleTodos"
-                >
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cotización</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridad</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Gestión</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Próxima Gestión</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr 
-              v-for="seguimiento in seguimientos" 
-              :key="seguimiento.id"
-              :class="obtenerClaseFilaSeguimiento(seguimiento)"
-              class="hover:bg-gray-50 transition-colors"
-            >
-              <td class="px-3 py-4">
-                <input 
-                  type="checkbox" 
-                  class="form-check-input"
-                  :value="seguimiento.id"
-                  v-model="seguimientosSeleccionados"
-                >
-              </td>
-              <td class="px-6 py-4">
-                <div class="text-sm font-medium text-gray-900">{{ seguimiento.cliente?.nombre_institucion || seguimiento.cliente?.nombre || 'Cliente N/A' }}</div>
-                <div class="text-sm text-gray-500">{{ seguimiento.cliente?.rut || '' }}</div>
-                <div v-if="seguimiento.cliente?.nombre_contacto" class="text-xs text-gray-400">
-                  Contacto: {{ seguimiento.cliente.nombre_contacto }}
-                </div>
-              </td>
-              <td class="px-6 py-4">
-                <!-- Edición en línea de estado -->
-                <select 
-                  v-model="seguimiento.estado" 
-                  @change="actualizarCampo(seguimiento, 'estado', $event.target.value)"
-                  :class="getEstadoSelectClass(seguimiento.estado)"
-                  class="text-sm border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                >
-                  <option value="pendiente">Pendiente</option>
-                  <option value="en_proceso">En Proceso</option>
-                  <option value="completado">Completado</option>
-                  <option value="vencido">Vencido</option>
-                  <option value="reprogramado">Reprogramado</option>
-                </select>
-              </td>
-              <td class="px-6 py-4">
-                <!-- Edición en línea de prioridad -->
-                <select 
-                  v-model="seguimiento.prioridad" 
-                  @change="actualizarCampo(seguimiento, 'prioridad', $event.target.value)"
-                  :class="getPrioridadSelectClass(seguimiento.prioridad)"
-                  class="text-sm border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                >
-                  <option value="baja">Baja</option>
-                  <option value="media">Media</option>
-                  <option value="alta">Alta</option>
-                  <option value="urgente">Urgente</option>
-                </select>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-900">
-                <span v-if="seguimiento.ultima_gestion">
-                  {{ formatearFecha(seguimiento.ultima_gestion) }}
-                </span>
-                <span v-else class="text-gray-400 italic">Pendiente</span>
-              </td>
-              <td class="px-6 py-4">
-                <!-- Edición en línea de fecha -->
-                <input 
-                  type="date" 
-                  v-model="seguimiento.proxima_gestion"
-                  @change="actualizarCampo(seguimiento, 'proxima_gestion', $event.target.value)"
-                  class="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                >
-                <div class="text-xs text-gray-500 mt-1">{{ getDiasRestantes(seguimiento.proxima_gestion) }}</div>
-              </td>
-              <td class="px-6 py-4">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  {{ seguimiento.vendedor?.name || 'N/A' }}
-                </span>
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex space-x-1">
-                  <button 
-                    @click="verDetalles(seguimiento)"
-                    class="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-colors"
-                    title="Ver detalles"
-                  >
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button 
-                    @click="editarSeguimiento(seguimiento)"
-                    class="text-green-600 hover:text-green-700 p-1 rounded hover:bg-green-50 transition-colors"
-                    title="Editar completo"
-                  >
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button 
-                    @click="eliminarSeguimiento(seguimiento)"
-                    class="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
-                    title="Eliminar"
-                  >
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-if="!cargando && seguimientos.length === 0" class="text-center text-muted p-4">
-          No se encontraron seguimientos con los filtros aplicados.
-        </p>
-      </div>
-
-      <!-- Paginación -->
-      <div class="card-footer" v-if="paginacion.last_page > 1">
-        <nav>
-          <ul class="pagination pagination-sm justify-content-center mb-0">
-            <li class="page-item" :class="{ disabled: paginacion.current_page <= 1 }">
-              <button class="page-link" @click="cambiarPagina(paginacion.current_page - 1)">
-                Anterior
-              </button>
-            </li>
-            <li 
-              v-for="pagina in paginas" 
-              :key="pagina" 
-              class="page-item"
-              :class="{ active: pagina === paginacion.current_page }"
-            >
-              <button class="page-link" @click="cambiarPagina(pagina)">
-                {{ pagina }}
-              </button>
-            </li>
-            <li class="page-item" :class="{ disabled: paginacion.current_page >= paginacion.last_page }">
-              <button class="page-link" @click="cambiarPagina(paginacion.current_page + 1)">
-                Siguiente
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </div>
-
-    <!-- Modal para actualización masiva -->
-    <div class="modal fade" id="modalUpdateMasivo" tabindex="-1" aria-labelledby="modalUpdateMasivoLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="modalUpdateMasivoLabel">Actualización Masiva</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <p class="alert alert-info">
-              <i class="fas fa-info-circle"></i>
-              Se actualizarán {{ seguimientosSeleccionados.length }} seguimiento(s) seleccionado(s)
-            </p>
-            
-            <div class="mb-3">
-              <label class="form-label">Estado</label>
-              <select v-model="updateMasivo.estado" class="form-select">
+    <!-- MODAL ACTUALIZACIÓN MASIVA -->
+    <div v-if="mostrarModalMasivo" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">
+            Actualizar {{ seguimientosSeleccionados.length }} seguimiento(s)
+          </h3>
+          
+          <form @submit.prevent="confirmarActualizacionMasiva">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <select v-model="actualizacionMasiva.estado" class="form-select w-full">
                 <option value="">No cambiar</option>
                 <option value="pendiente">Pendiente</option>
                 <option value="en_proceso">En Proceso</option>
@@ -352,10 +419,10 @@
                 <option value="reprogramado">Reprogramado</option>
               </select>
             </div>
-
-            <div class="mb-3">
-              <label class="form-label">Prioridad</label>
-              <select v-model="updateMasivo.prioridad" class="form-select">
+            
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Prioridad</label>
+              <select v-model="actualizacionMasiva.prioridad" class="form-select w-full">
                 <option value="">No cambiar</option>
                 <option value="baja">Baja</option>
                 <option value="media">Media</option>
@@ -363,174 +430,86 @@
                 <option value="urgente">Urgente</option>
               </select>
             </div>
-
-            <div class="mb-3">
-              <label class="form-label">Próxima Gestión</label>
-              <input type="date" v-model="updateMasivo.proxima_gestion" class="form-control">
+            
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Próxima Gestión</label>
+              <input 
+                type="date" 
+                v-model="actualizacionMasiva.proxima_gestion" 
+                class="form-input w-full"
+              >
             </div>
-
-            <div class="mb-3">
-              <label class="form-label">Vendedor</label>
-              <select v-model="updateMasivo.vendedor_id" class="form-select">
+            
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Vendedor</label>
+              <select v-model="actualizacionMasiva.vendedor_id" class="form-select w-full">
                 <option value="">No cambiar</option>
-                <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
+                <option 
+                  v-for="vendedor in vendedores" 
+                  :key="vendedor.id" 
+                  :value="vendedor.id"
+                >
                   {{ vendedor.name }}
                 </option>
               </select>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-              Cancelar
-            </button>
-            <button type="button" class="btn btn-warning" @click="ejecutarUpdateMasivo">
-              <i class="fas fa-save"></i> Actualizar Registros
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para nuevo seguimiento -->
-    <div class="modal fade" id="modalNuevoSeguimiento" tabindex="-1" aria-labelledby="modalNuevoSeguimientoLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="modalNuevoSeguimientoLabel">Nuevo Seguimiento</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <form @submit.prevent="guardarNuevoSeguimiento">
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label class="form-label">Cliente *</label>
-                    <select v-model="nuevoSeguimiento.cliente_id" class="form-select" required>
-                      <option value="">Seleccionar cliente</option>
-                      <!-- Aquí implementar búsqueda de clientes -->
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label class="form-label">Vendedor *</label>
-                    <select v-model="nuevoSeguimiento.vendedor_id" class="form-select" required>
-                      <option value="">Seleccionar vendedor</option>
-                      <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
-                        {{ vendedor.name }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-4">
-                  <div class="mb-3">
-                    <label class="form-label">Estado</label>
-                    <select v-model="nuevoSeguimiento.estado" class="form-select">
-                      <option value="pendiente">Pendiente</option>
-                      <option value="en_proceso">En Proceso</option>
-                      <option value="completado">Completado</option>
-                      <option value="vencido">Vencido</option>
-                      <option value="reprogramado">Reprogramado</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="mb-3">
-                    <label class="form-label">Prioridad</label>
-                    <select v-model="nuevoSeguimiento.prioridad" class="form-select">
-                      <option value="baja">Baja</option>
-                      <option value="media">Media</option>
-                      <option value="alta">Alta</option>
-                      <option value="urgente">Urgente</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="mb-3">
-                    <label class="form-label">Próxima Gestión *</label>
-                    <input type="date" v-model="nuevoSeguimiento.proxima_gestion" class="form-control" required>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Notas</label>
-                <textarea v-model="nuevoSeguimiento.notas" class="form-control" rows="3"></textarea>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-              Cancelar
-            </button>
-            <button type="button" class="btn btn-primary" @click="guardarNuevoSeguimiento">
-              <i class="fas fa-save"></i> Guardar Seguimiento
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para importar Excel -->
-    <div class="modal fade" id="modalImportar" tabindex="-1" aria-labelledby="modalImportarLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="modalImportarLabel">Importar desde Excel</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label class="form-label">Archivo Excel</label>
-              <input 
-                type="file" 
-                class="form-control" 
-                accept=".xlsx,.xls,.csv"
-                @change="seleccionarArchivo"
+            
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Notas adicionales</label>
+              <textarea 
+                v-model="actualizacionMasiva.notas" 
+                class="form-textarea w-full"
+                rows="3"
+                placeholder="Agregar notas..."
+              ></textarea>
+            </div>
+            
+            <div class="flex gap-2">
+              <button 
+                type="submit" 
+                :disabled="procesandoMasivo"
+                class="btn-primary flex-1"
               >
-              <div class="form-text">
-                Formatos soportados: .xlsx, .xls, .csv (máximo 2MB)
-              </div>
+                <i v-if="procesandoMasivo" class="fas fa-spinner fa-spin mr-1"></i>
+                Actualizar
+              </button>
+              <button 
+                type="button" 
+                @click="mostrarModalMasivo = false"
+                class="btn-secondary"
+              >
+                Cancelar
+              </button>
             </div>
-            <div class="alert alert-info">
-              <strong>Formato requerido:</strong>
-              <ul class="mb-0">
-                <li>Cliente (nombre o RUT)</li>
-                <li>Vendedor (nombre o email)</li>
-                <li>Próxima Gestión (YYYY-MM-DD)</li>
-                <li>Estado (opcional)</li>
-                <li>Prioridad (opcional)</li>
-              </ul>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-              Cancelar
-            </button>
-            <button 
-              type="button" 
-              class="btn btn-success" 
-              @click="importarArchivo"
-              :disabled="!archivoSeleccionado"
-            >
-              <i class="fas fa-upload"></i> Importar
-            </button>
-          </div>
+          </form>
         </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div 
+      v-if="toast.mostrar"
+      :class="[
+        'fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300',
+        toast.tipo === 'success' ? 'bg-green-500 text-white' : '',
+        toast.tipo === 'error' ? 'bg-red-500 text-white' : '',
+        toast.tipo === 'warning' ? 'bg-yellow-500 text-white' : ''
+      ]"
+    >
+      <div class="flex items-center">
+        <i :class="[
+          'mr-2',
+          toast.tipo === 'success' ? 'fas fa-check-circle' : '',
+          toast.tipo === 'error' ? 'fas fa-exclamation-circle' : '',
+          toast.tipo === 'warning' ? 'fas fa-exclamation-triangle' : ''
+        ]"></i>
+        {{ toast.mensaje }}
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
-// Importa los modales de Bootstrap de la forma correcta
-// No se importa { Modal } directamente aquí
-// Accedemos a window.bootstrap.Modal después de que bootstrap.js lo haya cargado
-
 export default {
   name: 'SeguimientoTable',
   props: {
@@ -538,651 +517,493 @@ export default {
       type: Array,
       default: () => []
     },
-    csrfToken: {
-      type: String,
-      required: true
+    puedeImportar: {
+      type: Boolean,
+      default: false
     }
   },
+  
   data() {
     return {
+      // Estados principales
       seguimientos: [],
-      seguimientosSeleccionados: [],
-      cargando: false,
-      filtroActivo: 'todos',
+      cargando: true,
+      estadisticas: {},
+      
+      // Filtros y búsqueda
       filtros: {
-        vendedor_id: '',
+        busqueda: '',
+        vendedor: '',
         estado: '',
-        prioridad: '',
-        buscar_cliente: '',
-        fecha_desde: '',
-        fecha_hasta: ''
+        prioridad: ''
       },
-      paginacion: {
+      filtroActivo: 'todos',
+      busquedaTimeout: null,
+      
+      // Ordenamiento
+      ordenActual: {
+        campo: 'proxima_gestion',
+        direccion: 'asc'
+      },
+      
+      // Selección múltiple
+      seguimientosSeleccionados: [],
+      todosMarcados: false,
+      
+      // Paginación
+      pagination: {
         current_page: 1,
         last_page: 1,
-        total: 0,
-        // Asegúrate de que estas propiedades estén inicializadas
-        from: 0, 
-        to: 0,
-        prev_page_url: null,
-        next_page_url: null,
+        per_page: 50,
+        total: 0
       },
-      updateMasivo: {
+      
+      // Modales
+      mostrarModalCrear: false,
+      mostrarModalMasivo: false,
+      mostrarModalImportar: false,
+      
+      // Actualización masiva
+      actualizacionMasiva: {
         estado: '',
         prioridad: '',
         proxima_gestion: '',
-        vendedor_id: ''
-      },
-      nuevoSeguimiento: {
-        cliente_id: '',
         vendedor_id: '',
-        estado: 'pendiente',
-        prioridad: 'media',
-        proxima_gestion: '',
         notas: ''
       },
-      archivoSeleccionado: null,
-      buscarClienteTimeout: null,
-      estadisticas: {
-        total: 0,
-        atrasados: 0,
-        proximos: 0,
-        completados_hoy: 0
-      },
-      mostrarModalNuevo: false, // Controla la visibilidad del modal Nuevo
-      mostrarModalImportar: false, // Controla la visibilidad del modal Importar
-      mostrarModalUpdateMasivo: false, // Controla la visibilidad del modal Actualización Masiva
-      mostrarToast: false, // Controla la visibilidad del toast
-      mensajeToast: '',    // Contenido del mensaje del toast
+      procesandoMasivo: false,
+      
+      // Notificaciones
+      toast: {
+        mostrar: false,
+        tipo: '',
+        mensaje: ''
+      }
     }
   },
+  
   computed: {
-    todosMarcados() {
-      return this.seguimientos.length > 0 && 
-             this.seguimientosSeleccionados.length === this.seguimientos.length;
-    },
     paginas() {
-      const paginas = [];
-      const actual = this.paginacion.current_page;
-      const total = this.paginacion.last_page;
+      const pages = [];
+      const current = this.pagination.current_page;
+      const last = this.pagination.last_page;
       
-      // Lógica para mostrar solo algunas páginas (ej. 2 antes, 2 después de la actual)
-      let startPage = Math.max(1, actual - 2);
-      let endPage = Math.min(total, actual + 2);
-
-      // Ajustar el rango si está cerca del principio o del final
-      if (endPage - startPage + 1 < 5) { // Si hay menos de 5 páginas en el rango, expandir
-        if (actual - 1 < 2) { // Cerca del principio
-          endPage = Math.min(total, 5);
-        } else if (total - actual < 2) { // Cerca del final
-          startPage = Math.max(1, total - 4);
-        }
-      }
-
-      for (let i = startPage; i <= endPage; i++) {
-        paginas.push(i);
+      // Mostrar máximo 5 páginas
+      let start = Math.max(1, current - 2);
+      let end = Math.min(last, current + 2);
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
       }
       
-      return paginas;
+      return pages;
     }
   },
+  
   mounted() {
-    console.log('✅ SeguimientoTable con edición en línea montado');
     this.cargarSeguimientos();
-    this.configurarFechaMinima();
     
-    // Exponer métodos al objeto global para interacción desde Blade (si es necesario)
-    window.seguimientoApp = {
-      abrirModalNuevo: this.abrirModalNuevo,
-      abrirModalImportar: this.abrirModalImportar,
-      abrirModalUpdateMasivo: this.abrirModalUpdateMasivo, // Exponer también este
-    };
+    // Auto-refresh cada 5 minutos
+    setInterval(() => {
+      if (!this.cargando) {
+        this.cargarSeguimientos(false);
+      }
+    }, 300000);
   },
+  
   methods: {
-    async cargarSeguimientos() {
-      this.cargando = true;
+    /**
+     * CARGAR SEGUIMIENTOS - MÉTODO PRINCIPAL
+     */
+    async cargarSeguimientos(mostrarCarga = true) {
       try {
+        if (mostrarCarga) {
+          this.cargando = true;
+        }
+        
         const params = new URLSearchParams({
-          filtro: this.filtroActivo,
-          page: this.paginacion.current_page,
+          page: this.pagination.current_page,
+          per_page: this.pagination.per_page,
+          sort: this.ordenActual.campo,
+          direction: this.ordenActual.direccion,
+          clasificacion: this.filtroActivo !== 'todos' ? this.filtroActivo : '',
           ...this.filtros
         });
-
-        const response = await axios.get(`/api/seguimiento?${params.toString()}`);
-        const data = response.data;
-
+        
+        const response = await fetch(`/api/seguimiento/data?${params}`);
+        const data = await response.json();
+        
         if (data.success) {
-          this.seguimientos = data.data.data || [];
-          this.paginacion = {
-            current_page: data.data.current_page,
-            last_page: data.data.last_page,
-            total: data.data.total,
-            from: data.data.from || 0,
-            to: data.data.to || 0,
-            prev_page_url: data.data.prev_page_url,
-            next_page_url: data.data.next_page_url,
-          };
-          this.estadisticas = data.stats || {};
-          console.log('✅ Seguimientos cargados:', this.seguimientos.length);
+          this.seguimientos = data.data.data;
+          this.pagination = data.pagination;
+          this.estadisticas = data.estadisticas;
         } else {
-          console.warn('⚠️ API sin datos:', data.message);
-          this.seguimientos = [];
+          this.mostrarToast('error', data.message || 'Error al cargar seguimientos');
         }
+        
       } catch (error) {
-        console.error('❌ Error al cargar seguimientos:', error);
-        this.seguimientos = [];
-        this.mostrarToastError('Error de conexión al cargar seguimientos.');
+        console.error('Error al cargar seguimientos:', error);
+        this.mostrarToast('error', 'Error de conexión al cargar seguimientos');
       } finally {
         this.cargando = false;
       }
     },
-
-    aplicarFiltro(filtro) {
-      this.filtroActivo = filtro;
-      this.paginacion.current_page = 1;
-      this.seguimientosSeleccionados = []; // Limpiar selección
+    
+    /**
+     * APLICAR FILTRO RÁPIDO - FUNCIONALIDAD CRÍTICA
+     */
+    aplicarFiltroRapido(tipo) {
+      this.filtroActivo = tipo;
+      this.pagination.current_page = 1;
+      this.seguimientosSeleccionados = [];
       this.cargarSeguimientos();
     },
-
-    limpiarFiltros() {
-      this.filtros = {
-        vendedor_id: '',
-        estado: '',
-        prioridad: '',
-        buscar_cliente: '',
-        fecha_desde: '',
-        fecha_hasta: ''
-      };
-      this.filtroActivo = 'todos';
-      this.paginacion.current_page = 1;
-      this.cargarSeguimientos();
-    },
-
-    buscarClienteConRetraso() {
-      clearTimeout(this.buscarClienteTimeout);
-      this.buscarClienteTimeout = setTimeout(() => {
-        this.paginacion.current_page = 1; // Reiniciar página al buscar
+    
+    /**
+     * BÚSQUEDA CON RETRASO
+     */
+    buscarConRetraso() {
+      clearTimeout(this.busquedaTimeout);
+      this.busquedaTimeout = setTimeout(() => {
+        this.pagination.current_page = 1;
         this.cargarSeguimientos();
       }, 500);
     },
-
-    async actualizarCampo(seguimiento, campo, valor) {
-      console.log(`Actualizando ${campo} a ${valor} para seguimiento ${seguimiento.id}`);
-      
-      try {
-        const response = await axios.put(`/seguimiento/${seguimiento.id}`, { [campo]: valor });
-        const data = response.data;
-        
-        if (data.success) {
-          this.mostrarToastExito(`${campo} actualizado exitosamente`);
-          // Actualizar el objeto seguimiento con los datos devueltos
-          Object.assign(seguimiento, data.data);
-          
-          // Recargar estadísticas si la actualización individual afecta los contadores
-          this.cargarSeguimientos(); 
-        } else {
-          this.mostrarToastError(data.message || 'Error al actualizar');
-          // Revertir el cambio
-          this.cargarSeguimientos();
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        this.mostrarToastError('Error de conexión al actualizar.');
-        this.cargarSeguimientos();
-      }
+    
+    /**
+     * APLICAR FILTROS
+     */
+    aplicarFiltros() {
+      this.pagination.current_page = 1;
+      this.cargarSeguimientos();
     },
-
+    
+    /**
+     * LIMPIAR FILTROS
+     */
+    limpiarFiltros() {
+      this.filtros = {
+        busqueda: '',
+        vendedor: '',
+        estado: '',
+        prioridad: ''
+      };
+      this.filtroActivo = 'todos';
+      this.pagination.current_page = 1;
+      this.cargarSeguimientos();
+    },
+    
+    /**
+     * ORDENAMIENTO
+     */
+    ordenar(campo) {
+      if (this.ordenActual.campo === campo) {
+        this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.ordenActual.campo = campo;
+        this.ordenActual.direccion = 'asc';
+      }
+      
+      this.cargarSeguimientos();
+    },
+    
+    getIconoOrden(campo) {
+      if (this.ordenActual.campo !== campo) {
+        return 'fas fa-sort text-gray-400';
+      }
+      
+      return this.ordenActual.direccion === 'asc' 
+        ? 'fas fa-sort-up text-blue-500' 
+        : 'fas fa-sort-down text-blue-500';
+    },
+    
+    /**
+     * SELECCIÓN MÚLTIPLE
+     */
     toggleTodos() {
       if (this.todosMarcados) {
-        this.seguimientosSeleccionados = [];
-      } else {
         this.seguimientosSeleccionados = this.seguimientos.map(s => s.id);
+      } else {
+        this.seguimientosSeleccionados = [];
       }
     },
-
-    deseleccionarTodos() {
-      this.seguimientosSeleccionados = [];
+    
+    /**
+     * ACTUALIZAR CAMPO INDIVIDUAL - EDICIÓN EN LÍNEA
+     */
+    async actualizarCampo(seguimientoId, campo, valor) {
+      try {
+        const response = await fetch(`/seguimiento/${seguimientoId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({
+            [campo]: valor
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Actualizar el seguimiento en la lista
+          const index = this.seguimientos.findIndex(s => s.id === seguimientoId);
+          if (index !== -1) {
+            this.seguimientos[index] = { ...this.seguimientos[index], ...data.data };
+          }
+          
+          this.mostrarToast('success', 'Seguimiento actualizado correctamente');
+        } else {
+          this.mostrarToast('error', data.message || 'Error al actualizar seguimiento');
+        }
+        
+      } catch (error) {
+        console.error('Error al actualizar campo:', error);
+        this.mostrarToast('error', 'Error de conexión al actualizar');
+      }
     },
-
-    abrirModalUpdateMasivo() {
-      this.updateMasivo = {
+    
+    /**
+     * ACTUALIZACIÓN MASIVA
+     */
+    actualizarMasivo() {
+      if (this.seguimientosSeleccionados.length === 0) {
+        this.mostrarToast('warning', 'Selecciona al menos un seguimiento');
+        return;
+      }
+      
+      this.mostrarModalMasivo = true;
+      
+      // Resetear formulario
+      this.actualizacionMasiva = {
         estado: '',
         prioridad: '',
         proxima_gestion: '',
-        vendedor_id: ''
+        vendedor_id: '',
+        notas: ''
       };
-      // Usar window.bootstrap.Modal
-      const modal = new window.bootstrap.Modal(document.getElementById('modalUpdateMasivo'));
-      modal.show();
     },
-
-    async ejecutarUpdateMasivo() {
+    
+    async confirmarActualizacionMasiva() {
       try {
-        const response = await axios.post('/api/seguimiento/update-masivo', {
-          ids: this.seguimientosSeleccionados,
-          ...this.updateMasivo,
-          _token: this.csrfToken 
+        this.procesandoMasivo = true;
+        
+        // Filtrar solo campos con valores
+        const datos = {};
+        Object.keys(this.actualizacionMasiva).forEach(key => {
+          if (this.actualizacionMasiva[key]) {
+            datos[key] = this.actualizacionMasiva[key];
+          }
         });
-
-        const data = response.data;
+        
+        if (Object.keys(datos).length === 0) {
+          this.mostrarToast('warning', 'Selecciona al menos un campo para actualizar');
+          return;
+        }
+        
+        const response = await fetch('/seguimiento/update-masivo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({
+            seguimiento_ids: this.seguimientosSeleccionados,
+            datos: datos
+          })
+        });
+        
+        const data = await response.json();
         
         if (data.success) {
-          this.mostrarToastExito(data.message);
-          this.deseleccionarTodos();
+          this.mostrarToast('success', data.message);
+          this.mostrarModalMasivo = false;
+          this.seguimientosSeleccionados = [];
+          this.todosMarcados = false;
           this.cargarSeguimientos();
-          
-          const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalUpdateMasivo'));
-          if (modal) modal.hide();
         } else {
-          this.mostrarToastError(data.message || 'Error en la actualización masiva');
+          this.mostrarToast('error', data.message || 'Error en actualización masiva');
         }
+        
       } catch (error) {
-        console.error('Error:', error);
-        this.mostrarToastError('Error de conexión en actualización masiva.');
+        console.error('Error en actualización masiva:', error);
+        this.mostrarToast('error', 'Error de conexión en actualización masiva');
+      } finally {
+        this.procesandoMasivo = false;
       }
     },
-
+    
+    /**
+     * PAGINACIÓN
+     */
     cambiarPagina(pagina) {
-      if (pagina >= 1 && pagina <= this.paginacion.last_page) {
-        this.paginacion.current_page = pagina;
+      if (pagina >= 1 && pagina <= this.pagination.last_page) {
+        this.pagination.current_page = pagina;
         this.cargarSeguimientos();
       }
     },
-
-    abrirModalNuevo() {
-      this.nuevoSeguimiento = {
-        cliente_id: '',
-        vendedor_id: '',
-        estado: 'pendiente',
-        prioridad: 'media',
-        proxima_gestion: '',
-        notas: ''
-      };
-      
-      const modal = new window.bootstrap.Modal(document.getElementById('modalNuevoSeguimiento'));
-      modal.show();
+    
+    /**
+     * ACCIONES DE SEGUIMIENTO
+     */
+    verDetalle(seguimiento) {
+      // TODO: Implementar modal de detalle
+      console.log('Ver detalle de seguimiento:', seguimiento);
     },
-
-    async guardarNuevoSeguimiento() {
-      try {
-        const response = await axios.post('/seguimiento', this.nuevoSeguimiento, {
-          headers: {
-            'X-CSRF-TOKEN': this.csrfToken
-          }
-        });
-
-        const data = response.data;
-        
-        if (data.success) {
-          this.mostrarToastExito('Seguimiento creado exitosamente');
-          this.cargarSeguimientos();
-          
-          const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalNuevoSeguimiento'));
-          if (modal) modal.hide();
-        } else {
-          this.mostrarToastError(data.message || 'Error al crear el seguimiento');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        this.mostrarToastError('Error de conexión');
-      }
+    
+    editarSeguimiento(seguimiento) {
+      // TODO: Implementar modal de edición
+      console.log('Editar seguimiento:', seguimiento);
     },
-
-    abrirModalImportar() {
-      this.archivoSeleccionado = null;
-      const modal = new window.bootstrap.Modal(document.getElementById('modalImportar'));
-      modal.show();
-    },
-
-    seleccionarArchivo(event) {
-      this.archivoSeleccionado = event.target.files[0];
-    },
-
-    async importarArchivo() {
-      if (!this.archivoSeleccionado) return;
-
-      const formData = new FormData();
-      formData.append('archivo', this.archivoSeleccionado);
-      formData.append('_token', this.csrfToken); 
-
-      try {
-        const response = await axios.post('/seguimiento/importar', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data', 
-            'X-CSRF-TOKEN': this.csrfToken
-          }
-        });
-
-        const data = response.data;
-        
-        if (data.success) {
-          this.mostrarToastExito('Archivo importado exitosamente');
-          this.cargarSeguimientos();
-          
-          const modal = window.bootstrap.Modal.getInstance(document.getElementById('modalImportar'));
-          if (modal) modal.hide();
-        } else {
-          this.mostrarToastError(data.message || 'Error al importar el archivo');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        this.mostrarToastError('Error de conexión');
-      }
-    },
-
-    async eliminarSeguimiento(seguimiento) {
-      if (!confirm(`¿Está seguro de eliminar el seguimiento de ${seguimiento.cliente?.nombre_institucion || 'este cliente'}?`)) {
+    
+    async eliminarSeguimiento(seguimientoId) {
+      if (!confirm('¿Estás seguro de que deseas eliminar este seguimiento?')) {
         return;
       }
-
+      
       try {
-        const response = await axios.delete(`/seguimiento/${seguimiento.id}`, {
+        const response = await fetch(`/seguimiento/${seguimientoId}`, {
+          method: 'DELETE',
           headers: {
-            'X-CSRF-TOKEN': this.csrfToken
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
           }
         });
-
-        const data = response.data;
+        
+        const data = await response.json();
         
         if (data.success) {
-          this.mostrarToastExito('Seguimiento eliminado exitosamente');
+          this.mostrarToast('success', 'Seguimiento eliminado correctamente');
           this.cargarSeguimientos();
         } else {
-          this.mostrarToastError(data.message || 'Error al eliminar');
+          this.mostrarToast('error', data.message || 'Error al eliminar seguimiento');
         }
+        
       } catch (error) {
-        console.error('Error:', error);
-        this.mostrarToastError('Error de conexión');
+        console.error('Error al eliminar seguimiento:', error);
+        this.mostrarToast('error', 'Error de conexión al eliminar');
       }
     },
-
-    editarSeguimiento(seguimiento) {
-      console.log('Editar seguimiento:', seguimiento);
-      alert('Modal de edición completa en desarrollo...'); // Temporal
-    },
-
-    configurarFechaMinima() {
-      const hoy = new Date().toISOString().split('T')[0];
-      this.nuevoSeguimiento.proxima_gestion = hoy;
-    },
-
-    formatearFecha(fecha) {
-      if (!fecha) return '';
-      return new Date(fecha).toLocaleDateString('es-CL');
-    },
-
-    getDiasRestantes(fecha) {
-      if (!fecha) return '';
-      
-      const hoy = new Date();
-      const fechaObj = new Date(fecha);
-      const diff = Math.ceil((fechaObj - hoy) / (1000 * 60 * 60 * 24));
-      
-      if (diff < 0) {
-        return `${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''} atrasado`;
-      } else if (diff === 0) {
-        return 'HOY';
-      } else if (diff === 1) {
-        return 'Mañana';
-      } else {
-        return `En ${diff} días`;
+    
+    verCotizacion(codigo) {
+      if (codigo && codigo !== 'Sin cotización') {
+        // TODO: Implementar navegación a cotización
+        console.log('Ver cotización:', codigo);
       }
     },
-
-    obtenerClaseFilaSeguimiento(seguimiento) {
-      const hoy = new Date();
-      const fecha = new Date(seguimiento.proxima_gestion);
+    
+    /**
+     * ESTILOS Y CLASES
+     */
+    getClaseFilaSeguimiento(seguimiento) {
+      const clases = [];
       
-      if (fecha < hoy && seguimiento.estado !== 'completado') {
-        return 'bg-red-50 border-l-4 border-red-500'; // Atrasado
+      // Color según clasificación
+      if (seguimiento.color_clasificacion === 'danger') {
+        clases.push('bg-red-50 border-l-4 border-red-400');
+      } else if (seguimiento.color_clasificacion === 'warning') {
+        clases.push('bg-yellow-50 border-l-4 border-yellow-400');
+      } else if (seguimiento.color_clasificacion === 'success') {
+        clases.push('bg-green-50 border-l-4 border-green-400');
       }
       
-      if (fecha.toDateString() === hoy.toDateString()) {
-        return 'bg-yellow-50 border-l-4 border-yellow-500'; // Hoy
-      }
-      
-      if (seguimiento.estado === 'completado') {
-        return 'bg-green-50'; // Completado
-      }
-      
-      return ''; // Normal
+      return clases.join(' ');
     },
-
-    getEstadoSelectClass(estado) {
+    
+    getClaseEstado(estado) {
       const clases = {
-        'pendiente': 'border-yellow-300 bg-yellow-50 text-yellow-800',
-        'en_proceso': 'border-blue-300 bg-blue-50 text-blue-800',
-        'completado': 'border-green-300 bg-green-50 text-green-800',
-        'vencido': 'border-red-300 bg-red-50 text-red-800',
-        'reprogramado': 'border-gray-300 bg-gray-50 text-gray-800'
+        'pendiente': 'bg-blue-100 text-blue-800',
+        'en_proceso': 'bg-yellow-100 text-yellow-800',
+        'completado': 'bg-green-100 text-green-800',
+        'vencido': 'bg-red-100 text-red-800',
+        'reprogramado': 'bg-purple-100 text-purple-800'
       };
-      return clases[estado] || 'border-gray-300 bg-gray-50 text-gray-800';
+      
+      return clases[estado] || 'bg-gray-100 text-gray-800';
     },
-
-    getPrioridadSelectClass(prioridad) {
+    
+    getClasePrioridad(prioridad) {
       const clases = {
-        'baja': 'border-gray-300 bg-gray-50 text-gray-700',
-        'media': 'border-blue-300 bg-blue-50 text-blue-700',
-        'alta': 'border-orange-300 bg-orange-50 text-orange-700',
-        'urgente': 'border-red-300 bg-red-50 text-red-700'
+        'baja': 'bg-gray-100 text-gray-800',
+        'media': 'bg-blue-100 text-blue-800',
+        'alta': 'bg-orange-100 text-orange-800',
+        'urgente': 'bg-red-100 text-red-800'
       };
-      return clases[prioridad] || 'border-gray-300 bg-gray-50 text-gray-700';
+      
+      return clases[prioridad] || 'bg-gray-100 text-gray-800';
     },
-
-    // Métodos para modales (ya definidos en la plantilla)
-    // Se gestionan por propiedades mostrarModalNuevo, etc. y sus respectivos
-    // cierres en los botones de cerrar modal y el footer.
-    // Las funciones de abrir/cerrar solo cambian el estado de esas propiedades.
-
-    // Métodos para mostrar Toast (ya definidos)
-    // mostrarToastExito y mostrarToastError ya están implementados abajo
+    
+    /**
+     * NOTIFICACIONES
+     */
+    mostrarToast(tipo, mensaje) {
+      this.toast = {
+        mostrar: true,
+        tipo: tipo,
+        mensaje: mensaje
+      };
+      
+      setTimeout(() => {
+        this.toast.mostrar = false;
+      }, 5000);
+    }
+  },
+  
+  watch: {
+    seguimientosSeleccionados() {
+      this.todosMarcados = this.seguimientos.length > 0 && 
+                          this.seguimientosSeleccionados.length === this.seguimientos.length;
+    }
   }
 }
 </script>
+
 <style scoped>
-/* Estilos específicos del componente */
+/* Clases CSS personalizadas para Bioscom */
+.btn-filter {
+  @apply px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg transition-colors duration-200;
+}
 
-/* Puedes añadir estilos generales del contenedor aquí */
+.btn-filter-active {
+  @apply font-semibold;
+}
+
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.btn-outline {
+  @apply border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.form-select {
+  @apply border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.form-input {
+  @apply border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.form-textarea {
+  @apply border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none;
+}
+
 .seguimiento-container {
-  /* Por ejemplo, para un contenedor más específico si es necesario */
+  @apply relative;
 }
 
-/* Estilos para la tabla */
-.min-w-full {
-  min-width: 100%;
+/* Mejoras para el diseño responsivo */
+@media (max-width: 768px) {
+  .grid-cols-12 {
+    @apply grid-cols-1;
+  }
+  
+  .col-span-1, .col-span-2 {
+    @apply col-span-1;
+  }
 }
-
-.divide-y > * + * {
-  border-top-width: 1px;
-}
-
-.divide-gray-200 {
-  border-color: #e5e7eb; /* gray-200 */
-}
-
-.bg-gray-50 {
-  background-color: #f9fafb; /* gray-50 */
-}
-
-.px-6 {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
-.py-3 {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-}
-
-.px-3 {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-.text-left {
-  text-align: left;
-}
-
-.text-xs {
-  font-size: 0.75rem;
-}
-
-.font-medium {
-  font-weight: 500;
-}
-
-.text-gray-500 {
-  color: #6b7280; /* gray-500 */
-}
-
-.uppercase {
-  text-transform: uppercase;
-}
-
-.tracking-wider {
-  letter-spacing: 0.05em;
-}
-
-.w-12 {
-  width: 3rem;
-}
-
-.bg-white {
-  background-color: #fff;
-}
-
-.shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.border {
-  border-width: 1px;
-}
-
-.border-gray-200 {
-  border-color: #e5e7eb;
-}
-
-.rounded-lg {
-  border-radius: 0.5rem;
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.overflow-x-auto {
-  overflow-x: auto;
-}
-
-/* Clases para estados de fila (Tailwind) */
-.bg-red-50 { background-color: #fef2f2; }
-.border-red-500 { border-color: #ef4444; } /* rojo */
-.bg-yellow-50 { background-color: #fffbeb; }
-.border-yellow-500 { border-color: #f59e0b; } /* amarillo */
-.bg-green-50 { background-color: #ecfdf5; }
-.border-green-500 { border-color: #10b981; } /* verde */
-.bg-blue-50 { background-color: #eff6ff; }
-.border-blue-500 { border-color: #3b82f6; } /* azul para en_proceso */
-.bg-gray-50 { background-color: #f9fafb; }
-.border-gray-500 { border-color: #6b7280; } /* gris para reprogramado/baja */
-
-
-/* Estilos de botones (Tailwind) */
-.bg-blue-600 { background-color: #2563eb; } /* Primario */
-.hover\:bg-blue-700:hover { background-color: #1d4ed8; }
-.text-white { color: #fff; }
-.px-4 { padding-left: 1rem; padding-right: 1rem; }
-.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-.rounded-lg { border-radius: 0.5rem; }
-.flex { display: flex; }
-.items-center { align-items: center; }
-.mr-2 { margin-right: 0.5rem; }
-.space-x-3 > * + * { margin-left: 0.75rem; }
-.text-red-600 { color: #dc2626; }
-.border-red-200 { border-color: #fecaca; }
-.bg-red-100 { background-color: #fee2e2; }
-.hover\:bg-red-200:hover { background-color: #fecaca; }
-
-/* Más estilos Tailwind */
-.text-gray-900 { color: #111827; }
-.font-bold { font-weight: 700; }
-.text-3xl { font-size: 1.875rem; }
-.gap-4 { gap: 1rem; }
-.grid { display: grid; }
-.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-.md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.p-6 { padding: 1.5rem; }
-.shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
-.text-lg { font-size: 1.125rem; }
-.font-semibold { font-weight: 600; }
-.mb-2 { margin-bottom: 0.5rem; }
-.text-yellow-600 { color: #d97706; }
-.border-yellow-200 { border-color: #fde68a; }
-.text-green-600 { color: #059669; }
-.border-green-200 { border-color: #a7f3d0; }
-.text-blue-600 { color: #2563eb; }
-.border-blue-200 { border-color: #bfdbfe; }
-
-/* Alertas */
-.bg-blue-50 { background-color: #eff6ff; }
-.border-blue-200 { border-color: #bfdbfe; }
-.text-blue-700 { color: #1d4ed8; }
-.p-4 { padding: 1rem; }
-.mt-4 { margin-top: 1rem; }
-.space-x-2 > * + * { margin-left: 0.75rem; }
-.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
-.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
-.text-sm { font-size: 0.875rem; }
-
-/* Loading spinner */
-.animate-spin { animation: spin 1s linear infinite; }
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.h-12 { height: 3rem; }
-.w-12 { width: 3rem; }
-.border-b-2 { border-bottom-width: 2px; }
-
-/* Text muted for no data message */
-.text-muted { color: #6c757d; }
-
-/* Headers de tabla sticky */
-.table-light { background-color: #f8f9fa; }
-
-/* Table data cells */
-.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
-.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
-.text-sm { font-size: 0.875rem; }
-.font-medium { font-weight: 500; }
-.text-gray-900 { color: #111827; }
-.text-gray-500 { color: #6b7280; }
-.text-xs { font-size: 0.75rem; }
-.text-gray-400 { color: #9ca3af; }
-.italic { font-style: italic; }
-.mt-1 { margin-top: 0.25rem; }
-
-/* Badges */
-.bg-gray-100 { background-color: #f3f4f6; }
-.text-gray-800 { color: #1f2937; }
-.rounded-full { border-radius: 9999px; }
-.px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
-.py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
-
-/* Buttons */
-.bg-blue-600 { background-color: #2563eb; }
-.hover\:bg-blue-700:hover { background-color: #1d4ed8; }
-.text-white { color: #fff; }
-.px-4 { padding-left: 1rem; padding-right: 1rem; }
-.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-.rounded-lg { border-radius: 0.5rem; }
-.flex { display: flex; }
-.items-center { align-items: center; }
-.mr-2 { margin-right: 0.5rem; }
-.space-x-3 > * + * { margin-left: 0.75rem; }
-.text-red-600 { color: #dc2626; }
-.border-red-200 { border-color: #fecaca; }
-.bg-red-100 { background-color: #fee2e2; }
-.hover\:bg-red-200:hover { background-color: #fecaca; }
 </style>

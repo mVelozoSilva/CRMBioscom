@@ -1,0 +1,742 @@
+/* ============================================
+   BIOSCOM CHILE SPA - SISTEMA DE COLORES CORPORATIVOS
+   ============================================ */
+
+/* Variables CSS Globales de Bioscom */
+:root {
+  /* Colores Corporativos Principales */
+  --bioscom-primary: #6284b8;
+  --bioscom-secondary: #5f87b8;
+  --bioscom-background: #f3f6fa;
+  --bioscom-text-primary: #00334e;
+  
+  /* Colores Derivados */
+  --bioscom-primary-light: rgba(98, 132, 184, 0.1);
+  --bioscom-primary-dark: #5a7bb0;
+  --bioscom-secondary-light: rgba(95, 135, 184, 0.1);
+  --bioscom-secondary-dark: #547ca8;
+  
+  /* Colores Funcionales */
+  --bioscom-success: #10b981;
+  --bioscom-warning: #f59e0b;
+  --bioscom-danger: #ef4444;
+  --bioscom-info: #3b82f6;
+  
+  /* Grises Corporativos */
+  --bioscom-gray-50: #f9fafb;
+  --bioscom-gray-100: #f3f4f6;
+  --bioscom-gray-200: #e5e7eb;
+  --bioscom-gray-300: #d1d5db;
+  --bioscom-gray-400: #9ca3af;
+  --bioscom-gray-500: #6b7280;
+  --bioscom-gray-600: #4b5563;
+  --bioscom-gray-700: #374151;
+  --bioscom-gray-800: #1f2937;
+  --bioscom-gray-900: #111827;
+  
+  /* Espaciado y Bordes */
+  --bioscom-border-radius: 0.5rem;
+  --bioscom-border-radius-sm: 0.25rem;
+  --bioscom-border-radius-lg: 0.75rem;
+  --bioscom-border-color: var(--bioscom-gray-200);
+  
+  /* Sombras */
+  --bioscom-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --bioscom-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --bioscom-shadow-lg: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+  --bioscom-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* Tipografía */
+  --bioscom-font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --bioscom-font-size-xs: 0.75rem;
+  --bioscom-font-size-sm: 0.875rem;
+  --bioscom-font-size-base: 1rem;
+  --bioscom-font-size-lg: 1.125rem;
+  --bioscom-font-size-xl: 1.25rem;
+  --bioscom-font-size-2xl: 1.5rem;
+  --bioscom-font-size-3xl: 1.875rem;
+  --bioscom-font-size-4xl: 2.25rem;
+  
+  /* Transiciones */
+  --bioscom-transition: all 0.2s ease-in-out;
+  --bioscom-transition-fast: all 0.15s ease-in-out;
+  --bioscom-transition-slow: all 0.3s ease-in-out;
+}
+
+/* ============================================
+   CLASES UTILITARIAS DE COLOR
+   ============================================ */
+
+/* Colores de Texto */
+.text-bioscom-primary { color: var(--bioscom-primary) !important; }
+.text-bioscom-secondary { color: var(--bioscom-secondary) !important; }
+.text-bioscom-background { color: var(--bioscom-background) !important; }
+.text-bioscom-text { color: var(--bioscom-text-primary) !important; }
+.text-bioscom-success { color: var(--bioscom-success) !important; }
+.text-bioscom-warning { color: var(--bioscom-warning) !important; }
+.text-bioscom-danger { color: var(--bioscom-danger) !important; }
+.text-bioscom-info { color: var(--bioscom-info) !important; }
+
+/* Colores de Fondo */
+.bg-bioscom-primary { background-color: var(--bioscom-primary) !important; }
+.bg-bioscom-secondary { background-color: var(--bioscom-secondary) !important; }
+.bg-bioscom-background { background-color: var(--bioscom-background) !important; }
+.bg-bioscom-primary-light { background-color: var(--bioscom-primary-light) !important; }
+.bg-bioscom-secondary-light { background-color: var(--bioscom-secondary-light) !important; }
+.bg-bioscom-success { background-color: var(--bioscom-success) !important; }
+.bg-bioscom-warning { background-color: var(--bioscom-warning) !important; }
+.bg-bioscom-danger { background-color: var(--bioscom-danger) !important; }
+.bg-bioscom-info { background-color: var(--bioscom-info) !important; }
+
+/* Colores de Borde */
+.border-bioscom-primary { border-color: var(--bioscom-primary) !important; }
+.border-bioscom-secondary { border-color: var(--bioscom-secondary) !important; }
+.border-bioscom { border-color: var(--bioscom-border-color) !important; }
+
+/* ============================================
+   NAVEGACIÓN CORPORATIVA
+   ============================================ */
+.navbar-bioscom {
+  background: linear-gradient(135deg, var(--bioscom-primary), var(--bioscom-secondary));
+  box-shadow: var(--bioscom-shadow);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.75rem 0;
+}
+
+.navbar-bioscom .navbar-brand {
+  font-family: var(--bioscom-font-family);
+  font-weight: 700;
+  color: var(--bioscom-background) !important;
+  text-decoration: none;
+  transition: var(--bioscom-transition);
+}
+
+.navbar-bioscom .navbar-brand:hover {
+  transform: translateY(-1px);
+}
+
+.navbar-bioscom .nav-link {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500;
+  padding: 0.5rem 1rem !important;
+  border-radius: var(--bioscom-border-radius-sm);
+  transition: var(--bioscom-transition);
+  margin: 0 0.25rem;
+}
+
+.navbar-bioscom .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white !important;
+  transform: translateY(-1px);
+}
+
+.navbar-bioscom .nav-link.fw-bold {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: white !important;
+}
+
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+.main-bioscom {
+  min-height: calc(100vh - 76px);
+  background-color: var(--bioscom-background);
+  padding: 2rem 0;
+}
+
+/* ============================================
+   BOTONES CORPORATIVOS BIOSCOM
+   ============================================ */
+.btn-bioscom-primary {
+  background-color: var(--bioscom-primary);
+  border-color: var(--bioscom-primary);
+  color: var(--bioscom-background);
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--bioscom-border-radius);
+  border: 1px solid var(--bioscom-primary);
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-sm);
+  cursor: pointer;
+  transition: var(--bioscom-transition);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-bioscom-primary:hover,
+.btn-bioscom-primary:focus {
+  background-color: var(--bioscom-primary-dark);
+  border-color: var(--bioscom-primary-dark);
+  color: var(--bioscom-background);
+  transform: translateY(-1px);
+  box-shadow: var(--bioscom-shadow-lg);
+}
+
+.btn-bioscom-secondary {
+  background-color: var(--bioscom-secondary);
+  border-color: var(--bioscom-secondary);
+  color: var(--bioscom-background);
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--bioscom-border-radius);
+  border: 1px solid var(--bioscom-secondary);
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-sm);
+  cursor: pointer;
+  transition: var(--bioscom-transition);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-bioscom-secondary:hover,
+.btn-bioscom-secondary:focus {
+  background-color: var(--bioscom-secondary-dark);
+  border-color: var(--bioscom-secondary-dark);
+  color: var(--bioscom-background);
+  transform: translateY(-1px);
+  box-shadow: var(--bioscom-shadow-lg);
+}
+
+.btn-bioscom-outline {
+  background-color: transparent;
+  border-color: var(--bioscom-border-color);
+  color: var(--bioscom-gray-600);
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--bioscom-border-radius);
+  border: 1px solid var(--bioscom-border-color);
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-sm);
+  cursor: pointer;
+  transition: var(--bioscom-transition);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-bioscom-outline:hover,
+.btn-bioscom-outline:focus {
+  background-color: var(--bioscom-background);
+  border-color: var(--bioscom-primary);
+  color: var(--bioscom-primary);
+  transform: translateY(-1px);
+}
+
+.btn-bioscom-success {
+  background-color: var(--bioscom-success);
+  border-color: var(--bioscom-success);
+  color: white;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--bioscom-border-radius);
+  border: 1px solid var(--bioscom-success);
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-sm);
+  cursor: pointer;
+  transition: var(--bioscom-transition);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-bioscom-warning {
+  background-color: var(--bioscom-warning);
+  border-color: var(--bioscom-warning);
+  color: white;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--bioscom-border-radius);
+  border: 1px solid var(--bioscom-warning);
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-sm);
+  cursor: pointer;
+  transition: var(--bioscom-transition);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-bioscom-danger {
+  background-color: var(--bioscom-danger);
+  border-color: var(--bioscom-danger);
+  color: white;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--bioscom-border-radius);
+  border: 1px solid var(--bioscom-danger);
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-sm);
+  cursor: pointer;
+  transition: var(--bioscom-transition);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Botones pequeños */
+.btn-bioscom-sm {
+  padding: 0.5rem 1rem;
+  font-size: var(--bioscom-font-size-xs);
+}
+
+.btn-bioscom-xs {
+  padding: 0.25rem 0.75rem;
+  font-size: var(--bioscom-font-size-xs);
+}
+
+/* ============================================
+   TARJETAS CORPORATIVAS
+   ============================================ */
+.card-bioscom {
+  background-color: white;
+  border: 1px solid var(--bioscom-border-color);
+  border-radius: var(--bioscom-border-radius);
+  box-shadow: var(--bioscom-shadow-sm);
+  transition: var(--bioscom-transition);
+  overflow: hidden;
+}
+
+.card-bioscom:hover {
+  box-shadow: var(--bioscom-shadow-lg);
+  transform: translateY(-2px);
+}
+
+.card-bioscom-header {
+  background-color: var(--bioscom-gray-50);
+  border-bottom: 1px solid var(--bioscom-border-color);
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  color: var(--bioscom-text-primary);
+}
+
+.card-bioscom-body {
+  padding: 1.5rem;
+}
+
+.card-bioscom-footer {
+  background-color: var(--bioscom-gray-50);
+  border-top: 1px solid var(--bioscom-border-color);
+  padding: 1rem 1.5rem;
+}
+
+/* ============================================
+   TABLAS CORPORATIVAS
+   ============================================ */
+.table-bioscom {
+  background-color: white;
+  border: 1px solid var(--bioscom-border-color);
+  border-radius: var(--bioscom-border-radius);
+  box-shadow: var(--bioscom-shadow-sm);
+  overflow: hidden;
+}
+
+.table-bioscom table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--bioscom-font-family);
+}
+
+.table-bioscom thead {
+  background-color: var(--bioscom-background);
+}
+
+.table-bioscom th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: var(--bioscom-font-size-xs);
+  font-weight: 600;
+  color: var(--bioscom-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--bioscom-border-color);
+}
+
+.table-bioscom td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--bioscom-gray-100);
+  color: var(--bioscom-text-primary);
+  font-size: var(--bioscom-font-size-sm);
+}
+
+.table-bioscom tbody tr:hover {
+  background-color: var(--bioscom-gray-50);
+}
+
+.table-bioscom tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============================================
+   FORMULARIOS CORPORATIVOS
+   ============================================ */
+.form-label-bioscom {
+  display: block;
+  font-size: var(--bioscom-font-size-sm);
+  font-weight: 500;
+  color: var(--bioscom-text-primary);
+  margin-bottom: 0.5rem;
+  font-family: var(--bioscom-font-family);
+}
+
+.input-bioscom,
+.select-bioscom,
+.textarea-bioscom {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--bioscom-border-color);
+  border-radius: var(--bioscom-border-radius);
+  font-size: var(--bioscom-font-size-sm);
+  font-family: var(--bioscom-font-family);
+  background-color: white;
+  color: var(--bioscom-text-primary);
+  transition: var(--bioscom-transition);
+}
+
+.input-bioscom:focus,
+.select-bioscom:focus,
+.textarea-bioscom:focus {
+  outline: none;
+  border-color: var(--bioscom-primary);
+  box-shadow: 0 0 0 3px var(--bioscom-primary-light);
+}
+
+.input-bioscom::placeholder {
+  color: var(--bioscom-gray-400);
+}
+
+/* ============================================
+   BADGES Y ETIQUETAS
+   ============================================ */
+.badge-bioscom {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: var(--bioscom-font-size-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  font-family: var(--bioscom-font-family);
+}
+
+.badge-bioscom-primary {
+  background-color: var(--bioscom-primary-light);
+  color: var(--bioscom-primary);
+}
+
+.badge-bioscom-secondary {
+  background-color: var(--bioscom-secondary-light);
+  color: var(--bioscom-secondary);
+}
+
+.badge-bioscom-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--bioscom-success);
+}
+
+.badge-bioscom-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--bioscom-warning);
+}
+
+.badge-bioscom-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--bioscom-danger);
+}
+
+.badge-bioscom-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--bioscom-info);
+}
+
+.badge-bioscom-gray {
+  background-color: var(--bioscom-gray-100);
+  color: var(--bioscom-gray-600);
+}
+
+/* ============================================
+   ALERTAS CORPORATIVAS
+   ============================================ */
+.alert-bioscom {
+  padding: 1rem 1.5rem;
+  border-radius: var(--bioscom-border-radius);
+  border: 1px solid transparent;
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-sm);
+  margin-bottom: 1rem;
+}
+
+.alert-bioscom-primary {
+  background-color: var(--bioscom-primary-light);
+  border-color: rgba(98, 132, 184, 0.2);
+  color: var(--bioscom-primary);
+}
+
+.alert-bioscom-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: var(--bioscom-success);
+}
+
+.alert-bioscom-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: var(--bioscom-warning);
+}
+
+.alert-bioscom-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--bioscom-danger);
+}
+
+.alert-bioscom-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: var(--bioscom-info);
+}
+
+/* ============================================
+   MODALES CORPORATIVOS
+   ============================================ */
+.modal-bioscom .modal-content {
+  border: none;
+  border-radius: var(--bioscom-border-radius-lg);
+  box-shadow: var(--bioscom-shadow-xl);
+  overflow: hidden;
+}
+
+.modal-bioscom .modal-header {
+  background: linear-gradient(135deg, var(--bioscom-primary), var(--bioscom-secondary));
+  color: var(--bioscom-background);
+  border-bottom: none;
+  padding: 1.5rem;
+}
+
+.modal-bioscom .modal-title {
+  font-family: var(--bioscom-font-family);
+  font-weight: 600;
+  color: var(--bioscom-background);
+}
+
+.modal-bioscom .btn-close {
+  filter: brightness(0) invert(1);
+}
+
+.modal-bioscom .modal-body {
+  padding: 1.5rem;
+  font-family: var(--bioscom-font-family);
+}
+
+.modal-bioscom .modal-footer {
+  background-color: var(--bioscom-gray-50);
+  border-top: 1px solid var(--bioscom-border-color);
+  padding: 1rem 1.5rem;
+}
+
+/* ============================================
+   UTILIDADES DE ESPACIADO
+   ============================================ */
+.space-bioscom-xs { margin: 0.25rem; }
+.space-bioscom-sm { margin: 0.5rem; }
+.space-bioscom-md { margin: 1rem; }
+.space-bioscom-lg { margin: 1.5rem; }
+.space-bioscom-xl { margin: 2rem; }
+
+.p-bioscom-xs { padding: 0.25rem; }
+.p-bioscom-sm { padding: 0.5rem; }
+.p-bioscom-md { padding: 1rem; }
+.p-bioscom-lg { padding: 1.5rem; }
+.p-bioscom-xl { padding: 2rem; }
+
+/* ============================================
+   TIPOGRAFÍA CORPORATIVA
+   ============================================ */
+.font-bioscom {
+  font-family: var(--bioscom-font-family);
+}
+
+.heading-bioscom-1 {
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-4xl);
+  font-weight: 700;
+  color: var(--bioscom-text-primary);
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.heading-bioscom-2 {
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-3xl);
+  font-weight: 600;
+  color: var(--bioscom-text-primary);
+  line-height: 1.3;
+  margin-bottom: 0.75rem;
+}
+
+.heading-bioscom-3 {
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-2xl);
+  font-weight: 600;
+  color: var(--bioscom-text-primary);
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+}
+
+.text-bioscom-body {
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-base);
+  color: var(--bioscom-text-primary);
+  line-height: 1.6;
+}
+
+.text-bioscom-small {
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-sm);
+  color: var(--bioscom-gray-600);
+}
+
+.text-bioscom-caption {
+  font-family: var(--bioscom-font-family);
+  font-size: var(--bioscom-font-size-xs);
+  color: var(--bioscom-gray-500);
+}
+
+/* ============================================
+   LOADING Y SPINNERS
+   ============================================ */
+.spinner-bioscom {
+  border: 3px solid var(--bioscom-primary-light);
+  border-top: 3px solid var(--bioscom-primary);
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  animation: spin-bioscom 1s linear infinite;
+}
+
+@keyframes spin-bioscom {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+@media (max-width: 768px) {
+  .navbar-bioscom .nav-link {
+    padding: 0.5rem;
+    margin: 0;
+  }
+  
+  .main-bioscom {
+    padding: 1rem 0;
+  }
+  
+  .card-bioscom {
+    border-radius: var(--bioscom-border-radius-sm);
+  }
+  
+  .btn-bioscom-primary,
+  .btn-bioscom-secondary,
+  .btn-bioscom-outline {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* ============================================
+   INTEGRACIONES ESPECÍFICAS
+   ============================================ */
+
+/* Override de Bootstrap con colores Bioscom */
+.btn-primary {
+  background-color: var(--bioscom-primary) !important;
+  border-color: var(--bioscom-primary) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--bioscom-primary-dark) !important;
+  border-color: var(--bioscom-primary-dark) !important;
+}
+
+.btn-secondary {
+  background-color: var(--bioscom-secondary) !important;
+  border-color: var(--bioscom-secondary) !important;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+  background-color: var(--bioscom-secondary-dark) !important;
+  border-color: var(--bioscom-secondary-dark) !important;
+}
+
+/* Links con colores corporativos */
+a {
+  color: var(--bioscom-primary);
+  text-decoration: none;
+  transition: var(--bioscom-transition);
+}
+
+a:hover {
+  color: var(--bioscom-primary-dark);
+}
+
+/* Focus states corporativos */
+*:focus {
+  outline: 2px solid var(--bioscom-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   CLASES DE ESTADO PARA SEGUIMIENTO
+   ============================================ */
+.seguimiento-atrasado {
+  background-color: rgba(239, 68, 68, 0.05);
+  border-left: 4px solid var(--bioscom-danger);
+}
+
+.seguimiento-proximo {
+  background-color: rgba(245, 158, 11, 0.05);
+  border-left: 4px solid var(--bioscom-warning);
+}
+
+.seguimiento-completado {
+  background-color: rgba(16, 185, 129, 0.05);
+  border-left: 4px solid var(--bioscom-success);
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+.toast-bioscom {
+  background-color: white;
+  border: 1px solid var(--bioscom-border-color);
+  border-radius: var(--bioscom-border-radius);
+  box-shadow: var(--bioscom-shadow-lg);
+  font-family: var(--bioscom-font-family);
+}
+
+.toast-bioscom.toast-success {
+  border-left: 4px solid var(--bioscom-success);
+}
+
+.toast-bioscom.toast-error {
+  border-left: 4px solid var(--bioscom-danger);
+}
+
+.toast-bioscom.toast-warning {
+  border-left: 4px solid var(--bioscom-warning);
+}
+
+.toast-bioscom.toast-info {
+  border-left: 4px solid var(--bioscom-info);
+}
