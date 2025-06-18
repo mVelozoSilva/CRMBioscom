@@ -14,7 +14,9 @@ class SeguimientosSeeder extends Seeder
     public function run(): void
     {
         // Limpiar seguimientos existentes
+        \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         Seguimiento::truncate();
+        \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         
         // Obtener los IDs reales existentes
         $clientesIds = Cliente::pluck('id')->toArray();

@@ -9,7 +9,7 @@ use Carbon\Carbon;
 
 class Seguimiento extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $table = 'seguimientos';
 
@@ -29,8 +29,8 @@ class Seguimiento extends Model
         'ultima_gestion' => 'date',
         'proxima_gestion' => 'date',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'updated_at' => 'datetime'
+        
     ];
 
     // Estados de seguimiento
@@ -336,25 +336,26 @@ class Seguimiento extends Model
 
     // **MÉTODOS PARA API Y VISTAS**
 
-    public function toTableArray()
-    {
-        return [
-            'id' => $this->id,
-            'cliente' => $this->cliente->nombre_institucion ?? 'Sin cliente',
-            'rut_cliente' => $this->cliente->rut ?? '',
-            'cotizacion' => $this->cotizacion->codigo ?? 'Sin cotización',
-            'vendedor' => $this->vendedor->name ?? 'Sin asignar',
-            'estado' => $this->estado,
-            'prioridad' => $this->prioridad,
-            'ultima_gestion' => $this->ultima_gestion ? $this->ultima_gestion->format('d/m/Y') : '',
-            'proxima_gestion' => $this->proxima_gestion ? $this->proxima_gestion->format('d/m/Y') : '',
-            'dias_atraso' => $this->dias_atraso,
-            'color_clasificacion' => $this->color_clasificacion,
-            'notas' => $this->notas ?? '',
-            'resultado_ultima_gestion' => $this->resultado_ultima_gestion ?? ''
-        ];
-    }
-
+    
+public function toTableArray()
+{
+    return [
+        'id' => $this->id,
+        'cliente' => $this->cliente->nombre_institucion ?? 'Sin cliente',
+        'rut_cliente' => $this->cliente->rut ?? '',
+        'cotizacion' => $this->cotizacion->codigo ?? 'Sin cotización',
+        'vendedor' => $this->vendedor->name ?? 'Sin vendedor',
+        'estado' => $this->estado,
+        'prioridad' => $this->prioridad,
+        'ultima_gestion' => $this->ultima_gestion ? 
+            \Carbon\Carbon::parse($this->ultima_gestion)->format('d/m/Y') : null,
+        'proxima_gestion' => $this->proxima_gestion ? 
+            \Carbon\Carbon::parse($this->proxima_gestion)->format('Y-m-d') : null,
+        'notas' => $this->notas,
+        'dias_atraso' => $this->proxima_gestion ? 
+            max(0, now()->diffInDays(\Carbon\Carbon::parse($this->proxima_gestion), false)) : 0
+    ];
+}
     // **EVENTOS DEL MODELO**
 
     protected static function boot()

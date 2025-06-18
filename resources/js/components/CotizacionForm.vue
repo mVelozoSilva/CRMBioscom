@@ -61,21 +61,23 @@
             <!-- Código (opcional) -->
             <div>
               <label for="codigo" class="block text-sm font-medium text-gray-700 mb-2">
-                Código
-                <span class="text-xs text-gray-500">(se genera automático)</span>
+                Código de Cotización
+                <span class="text-xs text-gray-500">(opcional - se genera automático si se deja vacío)</span>
               </label>
               <input
                 id="codigo"
                 v-model="formData.codigo"
                 type="text"
                 maxlength="50"
-                class="form-input w-full bg-gray-50"
+                class="form-input w-full"
                 :class="errores.codigo ? 'border-red-500' : ''"
-                placeholder="COT-202406-0001"
-                :readonly="!modoEdicion"
+                placeholder="Ej: COT-202406-0001 o ID-LICITACION-2024"
               >
               <div v-if="errores.codigo" class="mt-1 text-sm text-red-600">
                 {{ errores.codigo[0] }}
+              </div>
+              <div class="mt-1 text-xs text-gray-500">
+                💡 Para licitaciones públicas, puedes ingresar el ID específico requerido
               </div>
             </div>
 
@@ -125,7 +127,7 @@
               </div>
             </div>
 
-            <!-- Vendedor -->
+            <!-- Vendedor Mejorado -->
             <div>
               <label for="vendedor_id" class="block text-sm font-medium text-gray-700 mb-2">
                 Vendedor Asignado
@@ -133,19 +135,24 @@
               <select
                 id="vendedor_id"
                 v-model="formData.vendedor_id"
-                class="form-select w-full"
+                class="form-select w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-bioscom-primary focus:border-transparent"
                 :class="errores.vendedor_id ? 'border-red-500' : ''"
-                :disabled="!puedeAsignarVendedor"
               >
-                <option value="">Seleccionar vendedor</option>
+                <option value="" disabled>{{ vendedoresDisponibles.length > 0 ? 'Seleccionar vendedor...' : 'Cargando vendedores...' }}</option>
                 <option 
                   v-for="vendedor in vendedoresDisponibles" 
                   :key="vendedor.id" 
                   :value="vendedor.id"
                 >
-                  {{ vendedor.name }}
+                  {{ vendedor.name }} ({{ vendedor.email }})
                 </option>
               </select>
+              
+              <!-- Información adicional -->
+              <div class="mt-1 text-xs text-gray-500">
+                {{ vendedoresDisponibles.length }} vendedor(es) disponible(s)
+              </div>
+              
               <div v-if="errores.vendedor_id" class="mt-1 text-sm text-red-600">
                 {{ errores.vendedor_id[0] }}
               </div>
@@ -637,10 +644,6 @@ export default {
       type: Object,
       default: () => null
     },
-    vendedoresDisponibles: {
-      type: Array,
-      default: () => []
-    },
     puedeAsignarVendedor: {
       type: Boolean,
       default: false
@@ -667,13 +670,16 @@ export default {
         informacion_adicional: '',
         descripcion_opcionales: '',
         cliente_id: null,
-        vendedor_id: null,
+        vendedor_id: '',
         productos_cotizados: [],
         total_neto: 0,
         iva: 0,
         total_con_iva: 0,
         estado: 'Pendiente'
       },
+      
+      // Lista de vendedores disponibles
+      vendedoresDisponibles: [],
       
       // Estados del formulario
       enviando: false,
@@ -711,6 +717,21 @@ export default {
     }
   },
   
+  mounted() {
+    console.log('🚨 MÉTODO mounted EJECUTÁNDOSE'); 
+    this.initializeForm();
+    this.configurarAutoGuardado();
+    this.configurarClickAfuera();
+    this.cargarVendedores();
+    
+    // Establecer validez por defecto (30 días)
+    if (!this.formData.validez_oferta) {
+      const fechaFutura = new Date();
+      fechaFutura.setDate(fechaFutura.getDate() + 30);
+      this.formData.validez_oferta = fechaFutura.toISOString().split('T')[0];
+    }
+  },
+
   computed: {
     formularioValido() {
       return this.formData.nombre_cotizacion.trim() !== '' &&
@@ -753,19 +774,6 @@ export default {
     }
   },
   
-  mounted() {
-    this.initializeForm();
-    this.configurarAutoGuardado();
-    this.configurarClickAfuera();
-    
-    // Establecer validez por defecto (30 días)
-    if (!this.formData.validez_oferta) {
-      const fechaFutura = new Date();
-      fechaFutura.setDate(fechaFutura.getDate() + 30);
-      this.formData.validez_oferta = fechaFutura.toISOString().split('T')[0];
-    }
-  },
-  
   beforeDestroy() {
     if (this.autoGuardado.intervalo) {
       clearInterval(this.autoGuardado.intervalo);
@@ -799,13 +807,31 @@ export default {
       if (this.clientePreseleccionado) {
         this.seleccionarCliente(this.clientePreseleccionado);
       }
-      
-      // Auto-asignar vendedor actual si no tiene permisos para cambiar
-      if (!this.puedeAsignarVendedor && !this.formData.vendedor_id) {
-        // Se asigna automáticamente en el backend
-      }
     },
     
+    /**
+     * CARGAR VENDEDORES DISPONIBLES
+     */
+    async cargarVendedores() {
+      console.log('🚨 MÉTODO cargarVendedores EJECUTÁNDOSE');
+      try {
+        console.log('🔍 Cargando vendedores disponibles...');
+        const response = await axios.get('/crm-bioscom/public/api/seguimiento/vendedores');
+        
+        if (response.data && Array.isArray(response.data)) {
+          this.vendedoresDisponibles = response.data;
+          console.log('✅ Vendedores cargados:', this.vendedoresDisponibles);
+        } else {
+          console.log('⚠️ Respuesta de vendedores inesperada:', response.data);
+          this.vendedoresDisponibles = [];
+        }
+      } catch (error) {
+        console.error('❌ Error al cargar vendedores:', error);
+        this.vendedoresDisponibles = [];
+        this.mostrarToast('warning', 'No se pudieron cargar los vendedores');
+      }
+    },
+
     /**
      * BÚSQUEDA DE CLIENTES
      */
@@ -814,19 +840,30 @@ export default {
       
       if (this.busquedaCliente.length < 2) {
         this.clientesEncontrados = [];
+        this.mostrarSugerenciasCliente = false;
         return;
       }
       
+      console.log('🔍 Buscando clientes con:', this.busquedaCliente);
+      
       this.busquedaClienteTimeout = setTimeout(async () => {
         try {
-          const response = await fetch(`/api/buscar-clientes?q=${encodeURIComponent(this.busquedaCliente)}`);
-          const data = await response.json();
+          const response = await axios.get('/crm-bioscom/public/api/buscar-clientes', {
+            params: { q: this.busquedaCliente }
+          });
           
-          this.clientesEncontrados = data || [];
+          console.log('✅ Clientes encontrados:', response.data);
+          this.clientesEncontrados = response.data || [];
+          this.mostrarSugerenciasCliente = this.clientesEncontrados.length > 0;
           
         } catch (error) {
-          console.error('Error al buscar clientes:', error);
+          console.error('❌ Error al buscar clientes:', error);
           this.clientesEncontrados = [];
+          this.mostrarSugerenciasCliente = false;
+          
+          if (error.response) {
+            this.mostrarToast('error', 'Error al buscar clientes: ' + (error.response.data.message || 'Error del servidor'));
+          }
         }
       }, 300);
     },
@@ -852,7 +889,7 @@ export default {
       this.formData.nombre_contacto = '';
       this.clientesEncontrados = [];
     },
-    
+
     /**
      * BÚSQUEDA DE PRODUCTOS
      */
@@ -861,19 +898,30 @@ export default {
       
       if (this.busquedaProducto.length < 2) {
         this.productosEncontrados = [];
+        this.mostrarSugerenciasProducto = false;
         return;
       }
       
+      console.log('🔍 Buscando productos con:', this.busquedaProducto);
+      
       this.busquedaProductoTimeout = setTimeout(async () => {
         try {
-          const response = await fetch(`/api/buscar-productos?q=${encodeURIComponent(this.busquedaProducto)}`);
-          const data = await response.json();
+          const response = await axios.get('/crm-bioscom/public/api/buscar-productos', {
+            params: { q: this.busquedaProducto }
+          });
           
-          this.productosEncontrados = data || [];
+          console.log('✅ Productos encontrados:', response.data);
+          this.productosEncontrados = response.data || [];
+          this.mostrarSugerenciasProducto = this.productosEncontrados.length > 0;
           
         } catch (error) {
-          console.error('Error al buscar productos:', error);
+          console.error('❌ Error al buscar productos:', error);
           this.productosEncontrados = [];
+          this.mostrarSugerenciasProducto = false;
+          
+          if (error.response) {
+            this.mostrarToast('error', 'Error al buscar productos: ' + (error.response.data.message || 'Error del servidor'));
+          }
         }
       }, 300);
     },
@@ -950,243 +998,230 @@ export default {
      * ENVIAR FORMULARIO
      */
     async enviarFormulario() {
-      if (!this.formularioValido) {
-        this.mostrarToast('warning', 'Por favor completa todos los campos obligatorios');
-        return;
+  console.log('🚀 Iniciando enviarFormulario()');
+  console.log('🔍 Modo edición:', this.modoEdicion);
+  
+  // Verificar si el formulario es válido
+  if (!this.formularioValido) {
+    console.log('❌ Formulario no válido, no se puede enviar');
+    this.mostrarToast('warning', 'Por favor completa todos los campos obligatorios');
+    return;
+  }
+  
+  console.log('✅ Formulario válido, preparando datos...');
+  
+  // Preparar datos del formulario
+  const datosEnvio = {
+    ...this.formData,
+    // Asegurar que cliente_id esté presente
+    cliente_id: this.clienteSeleccionado ? this.clienteSeleccionado.id : this.formData.cliente_id,
+    // Convertir productos a la estructura esperada por el backend
+    productos_cotizados: this.formData.productos_cotizados.map(producto => ({
+      id_producto: producto.producto_id,
+      nombre_producto: producto.nombre,
+      descripcion_corta: producto.descripcion || '',
+      precio_unitario: parseFloat(producto.precio_unitario) || 0,
+      cantidad: parseInt(producto.cantidad) || 1,
+      descuento: parseFloat(producto.descuento) || 0
+    }))
+  };
+  
+  console.log('📋 Datos preparados para enviar:', datosEnvio);
+  
+  this.enviando = true;
+  this.errores = {};
+  
+  try {
+    let response;
+    
+    if (this.modoEdicion) {
+      // **MODO EDICIÓN - Actualizar cotización existente**
+      console.log('🔧 Modo edición - enviando PUT a: /cotizaciones/' + this.formData.id);
+      
+      response = await axios.put(`/crm-bioscom/public/cotizaciones/${this.formData.id}`, datosEnvio, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+      });
+    } else {
+      // **MODO CREACIÓN - Crear nueva cotización**
+      console.log('➕ Modo creación - enviando POST a: /cotizaciones');
+      
+      response = await axios.post('/crm-bioscom/public/cotizaciones', datosEnvio, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+      });
+    }
+    
+    console.log('✅ Respuesta exitosa del servidor:', response.data);
+    console.log('📊 Status code:', response.status);
+    
+    if (response.data.success) {
+      const mensaje = this.modoEdicion 
+        ? (response.data.message || 'Cotización actualizada exitosamente')
+        : (response.data.message || 'Cotización creada exitosamente');
+      
+      this.mostrarToast('success', mensaje);
+      
+      // Limpiar borrador si existe (solo en modo creación)
+      if (!this.modoEdicion) {
+        localStorage.removeItem('cotizacion_borrador');
       }
       
-      this.enviando = true;
-      this.errores = {};
+      // Emitir evento de éxito
+      const eventoEmitir = this.modoEdicion ? 'cotizacion-actualizada' : 'cotizacion-guardada';
+      this.$emit(eventoEmitir, response.data.data);
       
-      try {
-        const url = this.modoEdicion 
-          ? `/cotizaciones/${this.initialCotizacion.id}`
-          : '/cotizaciones';
-          
-        const method = this.modoEdicion ? 'PUT' : 'POST';
-        
-        const response = await fetch(url, {
-          method: method,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-          },
-          body: JSON.stringify(this.formData)
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          this.mostrarToast('success', data.message);
-          
-          // Limpiar borrador
-          localStorage.removeItem('cotizacion_borrador');
-          
-          // Emitir evento de éxito
-          this.$emit('cotizacion-guardada', data.data);
-          
-          // Redireccionar
-          setTimeout(() => {
-            window.location.href = data.data.redirect_url || '/cotizaciones';
-          }, 1500);
-          
+      // Redirigir después de un momento
+      setTimeout(() => {
+        if (response.data.data && response.data.data.redirect_url) {
+          window.location.href = response.data.data.redirect_url;
         } else {
-          if (data.errors) {
-            this.errores = data.errors;
+          // Fallback de redirección
+          if (this.modoEdicion) {
+            window.location.href = `/crm-bioscom/public/cotizaciones/${this.formData.id}`;
+          } else {
+            window.location.href = '/crm-bioscom/public/cotizaciones';
           }
-          this.mostrarToast('error', data.message || 'Error al guardar cotización');
         }
-        
-      } catch (error) {
-        console.error('Error al enviar formulario:', error);
-        this.mostrarToast('error', 'Error de conexión al guardar cotización');
-      } finally {
-        this.enviando = false;
-      }
-    },
-    
-    /**
-     * GUARDAR BORRADOR
-     */
-    guardarBorrador() {
-      const borrador = {
-        ...this.formData,
-        cliente_seleccionado: this.clienteSeleccionado,
-        timestamp: new Date().toISOString()
-      };
+      }, 1500);
+    } else {
+      console.log('⚠️ Respuesta no exitosa:', response.data);
+      const mensajeError = this.modoEdicion 
+        ? (response.data.message || 'Error al actualizar cotización')
+        : (response.data.message || 'Error al crear cotización');
       
-      localStorage.setItem('cotizacion_borrador', JSON.stringify(borrador));
-      this.mostrarToast('success', 'Borrador guardado localmente');
-    },
-    
-    /**
-     * CARGAR BORRADOR
-     */
-    cargarBorrador() {
-      const borrador = localStorage.getItem('cotizacion_borrador');
-      if (borrador) {
-        const data = JSON.parse(borrador);
-        
-        if (confirm('¿Deseas cargar el borrador guardado anteriormente?')) {
-          this.formData = { ...this.formData, ...data };
-          
-          if (data.cliente_seleccionado) {
-            this.seleccionarCliente(data.cliente_seleccionado);
-          }
-          
-          delete this.formData.timestamp;
-          localStorage.removeItem('cotizacion_borrador');
-          
-          this.calcularTotales();
-          this.mostrarToast('success', 'Borrador cargado');
-        }
+      this.mostrarToast('error', mensajeError);
+      
+      if (response.data.errors) {
+        this.errores = response.data.errors;
+        console.log('📝 Errores de validación:', this.errores);
       }
-    },
+    }
     
+  } catch (error) {
+  console.error('❌ Error completo:', error);
+  
+  if (error.response) {
+    console.error('🔴 Status:', error.response.status);
+    console.error('📋 Error data completo:', error.response.data);
+    console.error('📝 Headers:', error.response.headers);
+    
+    // Log detallado del error de validación
+    if (error.response.status === 422) {
+      console.error('🚨 ERROR 422 - Detalles completos:');
+      console.error('Message:', error.response.data.message);
+      console.error('Errors:', error.response.data.errors);
+      
+      // Mostrar cada error específico
+      if (error.response.data.errors) {
+        Object.keys(error.response.data.errors).forEach(campo => {
+          console.error(`❌ Campo "${campo}":`, error.response.data.errors[campo]);
+        });
+      }
+    }
+    
+    // Manejar errores de validación (422)
+    if (error.response.status === 422 && error.response.data.errors) {
+      this.errores = error.response.data.errors;
+      this.mostrarToast('error', 'Por favor revisa los campos marcados en rojo');
+    } else if (error.response.data && error.response.data.message) {
+      this.mostrarToast('error', error.response.data.message);
+    } else {
+      this.mostrarToast('error', 'Error del servidor. Revisa la consola para más detalles.');
+    }
+  } else if (error.request) {
+    console.error('📡 Error de red:', error.request);
+    this.mostrarToast('error', 'Error de conexión. Verifica tu internet.');
+  } else {
+    console.error('🔧 Error de configuración:', error.message);
+    this.mostrarToast('error', 'Error interno: ' + error.message);
+  }
+} finally {
+    this.enviando = false;
+    console.log('🏁 Finalizando enviarFormulario()');
+  }
+},
+
     /**
      * PREVISUALIZAR PDF
      */
     previsualizarPDF() {
       if (this.formData.productos_cotizados.length === 0) {
-        this.mostrarToast('warning', 'Agrega al menos un producto para previsualizar');
+        this.mostrarToast('warning', 'No hay productos agregados a la cotización');
         return;
       }
       
-      // TODO: Implementar previsualización PDF
-      this.mostrarToast('warning', 'Funcionalidad de previsualización en desarrollo');
+      // Emitir evento para previsualizar PDF
+      this.$emit('previsualizar-pdf', this.formData);
     },
-    
+
     /**
-     * CANCELAR FORMULARIO
+     * CANCELAR ACCIÓN
      */
     cancelar() {
-      if (this.formularioTieneCambios()) {
-        if (!confirm('¿Estás seguro de que deseas cancelar? Los cambios no guardados se perderán.')) {
-          return;
-        }
-      }
-      
-      this.$emit('formulario-cancelado');
-      window.history.back();
+      this.$emit('cancelar');
     },
-    
+
     /**
-     * AUTO-GUARDADO
+     * GUARDAR BORRADOR
+     */
+    guardarBorrador() {
+      localStorage.setItem('cotizacion_borrador', JSON.stringify(this.formData));
+      this.mostrarToast('success', 'Borrador guardado exitosamente');
+    },
+
+    /**
+     * CONFIGURAR AUTO-GUARDADO
      */
     configurarAutoGuardado() {
-      if (!this.modoEdicion) return;
-      
-      this.autoGuardado.intervalo = setInterval(() => {
-        if (this.formularioTieneCambios()) {
+      if (this.autoGuardado.activo) {
+        this.autoGuardado.intervalo = setInterval(() => {
           this.guardarBorrador();
-          this.autoGuardado.activo = true;
-        }
-      }, 60000); // Cada minuto
-    },
-    
-    /**
-     * CLICK AFUERA PARA CERRAR SUGERENCIAS
-     */
-    configurarClickAfuera() {
-      document.addEventListener('click', this.handleClickAfuera);
-    },
-    
-    handleClickAfuera(event) {
-      if (!event.target.closest('.relative')) {
-        this.mostrarSugerenciasCliente = false;
-        this.mostrarSugerenciasProducto = false;
+        }, 30000); // Guardar cada 30 segundos
       }
     },
-    
+
     /**
-     * VERIFICAR CAMBIOS
+     * CONFIGURAR CLICK FUERA DEL COMPONENTE
      */
-    formularioTieneCambios() {
-      if (!this.initialCotizacion) {
-        return Object.values(this.formData).some(value => {
-          if (Array.isArray(value)) return value.length > 0;
-          return value && value.toString().trim() !== '';
-        });
-      }
-      
-      // Comparar con datos iniciales
-      return JSON.stringify(this.formData) !== JSON.stringify(this.initialCotizacion);
-    },
-    
     /**
-     * NOTIFICACIONES
+ * CLICK AFUERA PARA CERRAR SUGERENCIAS
+ */
+configurarClickAfuera() {
+  document.addEventListener('click', this.handleClickAfuera);
+},
+
+handleClickAfuera(event) {
+  // Verificar que event y event.target existen
+  if (!event || !event.target) {
+    return;
+  }
+  
+  // Buscar el elemento .relative más cercano
+  const elementoRelativo = event.target.closest('.relative');
+  
+  // Si no hay elemento .relative, cerrar sugerencias
+  if (!elementoRelativo) {
+    this.mostrarSugerenciasCliente = false;
+    this.mostrarSugerenciasProducto = false;
+  }
+},
+    /**
+     * MOSTRAR NOTIFICACIONES TOAST
      */
     mostrarToast(tipo, mensaje) {
-      this.toast = {
-        mostrar: true,
-        tipo: tipo,
-        mensaje: mensaje
-      };
+      this.toast = { mostrar: true, tipo, mensaje };
       
       setTimeout(() => {
         this.toast.mostrar = false;
       }, 5000);
     }
-  },
-  
-  created() {
-    // Cargar borrador si existe y no está en modo edición
-    if (!this.modoEdicion) {
-      this.cargarBorrador();
-    }
   }
 }
 </script>
-
-<style scoped>
-/* Clases CSS personalizadas para Bioscom */
-.cotizacion-form-container {
-  @apply max-w-6xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden;
-}
-
-.form-input {
-  @apply border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200;
-}
-
-.form-select {
-  @apply border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200;
-}
-
-.form-textarea {
-  @apply border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-colors duration-200;
-}
-
-.btn-primary {
-  @apply bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200;
-}
-
-.btn-secondary {
-  @apply bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200;
-}
-
-.btn-outline {
-  @apply border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors duration-200;
-}
-
-/* Animaciones suaves */
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-  @apply transform scale-[1.01];
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .cotizacion-form-container {
-    @apply mx-4;
-  }
-  
-  .grid.grid-cols-7 {
-    @apply grid-cols-1;
-  }
-  
-  .grid.grid-cols-3 {
-    @apply grid-cols-1;
-  }
-}
-</style>

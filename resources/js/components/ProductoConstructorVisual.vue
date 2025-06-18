@@ -419,7 +419,7 @@ export default {
     
     async previsualizarContenido() {
       try {
-        const response = await fetch('/api/productos/previsualizar-constructor', {
+        const response = await fetch('/crm-bioscom/public/api/productos/previsualizar-constructor', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

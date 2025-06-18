@@ -306,9 +306,9 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
-                                            @php
-                                                $imagenes = json_decode($producto->imagenes, true);
-                                                $imagenPrincipal = $imagenes[0]['url'] ?? '/images/producto-default.png';
+                                           @php
+                                                $imagenes = is_string($producto->imagenes) ? json_decode($producto->imagenes, true) : ($producto->imagenes ?? []);
+                                                $imagenPrincipal = ($imagenes[0]['url'] ?? null) ?: '/images/producto-default.png';
                                             @endphp
                                             <img class="h-10 w-10 rounded-lg object-cover" 
                                                  src="{{ $imagenPrincipal }}" 
@@ -415,8 +415,8 @@
                     @foreach($productos as $producto)
                         <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                             @php
-                                $imagenes = json_decode($producto->imagenes, true);
-                                $imagenPrincipal = $imagenes[0]['url'] ?? '/images/producto-default.png';
+                                $imagenes = is_string($producto->imagenes) ? json_decode($producto->imagenes, true) : ($producto->imagenes ?? []);
+                                $imagenPrincipal = ($imagenes[0]['url'] ?? null) ?: '/images/producto-default.png';
                             @endphp
                             <div class="aspect-w-16 aspect-h-10">
                                 <img src="{{ $imagenPrincipal }}" 
@@ -524,11 +524,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // Función para previsualizar producto
 async function previsualizarProducto(id) {
     try {
-        const response = await fetch(`/api/productos/${id}/detalles-completos`);
+        const response = await fetch(`/crm-bioscom/public/api/productos/${id}/detalles-completos`);
         const data = await response.json();
         
         if (data.success && data.producto.bloques_contenido) {
-            const previewResponse = await fetch('/api/productos/previsualizar-constructor', {
+            const previewResponse = await fetch('/crm-bioscom/public/api/productos/previsualizar-constructor', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -561,7 +561,7 @@ async function previsualizarProducto(id) {
 async function duplicarProducto(id) {
     if (confirm('¿Estás seguro de que quieres duplicar este producto?')) {
         try {
-            const response = await fetch(`/api/productos/${id}/duplicar`, {
+            const response = await fetch(`/crm-bioscom/public/api/productos/${id}/duplicar`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')

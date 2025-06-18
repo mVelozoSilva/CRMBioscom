@@ -808,7 +808,7 @@ async function verContactosAdicionales() {
     document.getElementById('modal-contactos').classList.remove('hidden');
     
     try {
-        const response = await fetch(`/api/contactos/cliente/${clienteId}`);
+        const response = await fetch(`/crm-bioscom/public/api/contactos/cliente/${clienteId}`);
         const data = await response.json();
         
         const listaContactos = document.getElementById('lista-contactos');
@@ -874,7 +874,7 @@ function editarContacto(contactoId) {
 async function eliminarContacto(contactoId) {
     if (confirm('¿Estás seguro de que deseas eliminar este contacto?')) {
         try {
-            const response = await fetch(`/api/contactos/${contactoId}`, {
+            const response = await fetch(`/crm-bioscom/public/api/contactos/${contactoId}`, {
                 method: 'DELETE',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),

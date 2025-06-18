@@ -9,56 +9,46 @@ use Carbon\Carbon;
 
 class Tarea extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory; // Removemos SoftDeletes por ahora ya que la tabla no tiene deleted_at
 
     protected $table = 'tareas';
 
     protected $fillable = [
         'titulo',
         'descripcion',
-        'usuario_id',
+        'usuario_id',                    // Mantener por compatibilidad
+        'usuario_asignado_id',           // Real en BD
+        'usuario_creador_id',            // Real en BD
         'tipo',
         'origen',
         'seguimiento_id',
         'cotizacion_id',
         'cliente_id',
-        'fecha_tarea',
-        'hora_inicio',
-        'hora_fin',
-        'duracion_estimada',
+        'fecha_vencimiento',             // Real en BD (no fecha_tarea)
+        'hora_estimada',                 // Real en BD (no hora_inicio)
+        'duracion_estimada_minutos',     // Real en BD (no duracion_estimada)
         'estado',
         'prioridad',
-        'tiene_recordatorio',
-        'recordatorio_en',
-        'tipo_recordatorio',
-        'metadata_distribucion',
+        'metadatos',                     // Real en BD (no metadata_distribucion)
         'es_distribuida_automaticamente',
-        'intentos_completar',
         'notas',
         'resultado',
-        'completada_en',
-        'configuracion_rol',
+        'fecha_completada',              // Real en BD (no completada_en)
     ];
 
     protected $casts = [
-        'fecha_tarea' => 'date',
-        'hora_inicio' => 'datetime:H:i',
-        'hora_fin' => 'datetime:H:i',
-        'tiene_recordatorio' => 'boolean',
-        'recordatorio_en' => 'datetime',
+        'fecha_vencimiento' => 'date',   // Cambiado de fecha_tarea
+        'hora_estimada' => 'datetime:H:i',
         'es_distribuida_automaticamente' => 'boolean',
-        'completada_en' => 'datetime',
-        'metadata_distribucion' => 'array',
-        'configuracion_rol' => 'array',
+        'fecha_completada' => 'datetime', // Cambiado de completada_en
+        'metadatos' => 'array',          // Cambiado de metadata_distribucion
     ];
 
     protected $dates = [
-        'fecha_tarea',
-        'recordatorio_en',
-        'completada_en',
+        'fecha_vencimiento',             // Cambiado
+        'fecha_completada',              // Cambiado
         'created_at',
         'updated_at',
-        'deleted_at',
     ];
 
     /**
@@ -69,7 +59,8 @@ class Tarea extends Model
         'en_progreso',
         'completada',
         'cancelada',
-        'pospuesta'
+        'pospuesta',
+        'vencida'  // Agregado según BD
     ];
 
     /**
@@ -99,23 +90,15 @@ class Tarea extends Model
     ];
 
     /**
-     * Orígenes de las tareas
+     * Orígenes de las tareas (según BD real)
      */
     const ORIGENES = [
         'manual',
-        'automatica_seguimiento',
-        'automatica_cotizacion',
-        'automatica_triaje',
-        'distribucion_masiva'
-    ];
-
-    /**
-     * Tipos de recordatorios
-     */
-    const TIPOS_RECORDATORIO = [
-        'email',
+        'distribucion_masiva',
+        'distribucion_automatica',
         'sistema',
-        'popup'
+        'integracion',
+        'distribucion_masiva_fase1a'
     ];
 
     /**
@@ -127,7 +110,15 @@ class Tarea extends Model
      */
     public function usuario()
     {
-        return $this->belongsTo(User::class, 'usuario_id');
+        return $this->belongsTo(User::class, 'usuario_asignado_id'); // Cambiado
+    }
+
+    /**
+     * Usuario creador de la tarea
+     */
+    public function usuarioCreador()
+    {
+        return $this->belongsTo(User::class, 'usuario_creador_id');
     }
 
     /**
@@ -155,7 +146,7 @@ class Tarea extends Model
     }
 
     /**
-     * Scopes
+     * Scopes corregidos
      */
 
     /**
@@ -187,7 +178,7 @@ class Tarea extends Model
      */
     public function scopeDeUsuario($query, $usuarioId)
     {
-        return $query->where('usuario_id', $usuarioId);
+        return $query->where('usuario_asignado_id', $usuarioId); // Corregido
     }
 
     /**
@@ -211,7 +202,7 @@ class Tarea extends Model
      */
     public function scopeHoy($query)
     {
-        return $query->whereDate('fecha_tarea', Carbon::today());
+        return $query->whereDate('fecha_vencimiento', Carbon::today()); // Corregido
     }
 
     /**
@@ -219,7 +210,7 @@ class Tarea extends Model
      */
     public function scopeEstaSemana($query)
     {
-        return $query->whereBetween('fecha_tarea', [
+        return $query->whereBetween('fecha_vencimiento', [ // Corregido
             Carbon::now()->startOfWeek(),
             Carbon::now()->endOfWeek()
         ]);
@@ -230,7 +221,7 @@ class Tarea extends Model
      */
     public function scopeVencidas($query)
     {
-        return $query->where('fecha_tarea', '<', Carbon::today())
+        return $query->where('fecha_vencimiento', '<', Carbon::today()) // Corregido
                     ->whereIn('estado', ['pendiente', 'en_progreso']);
     }
 
@@ -239,7 +230,7 @@ class Tarea extends Model
      */
     public function scopeProximas($query, $dias = 7)
     {
-        return $query->whereBetween('fecha_tarea', [
+        return $query->whereBetween('fecha_vencimiento', [ // Corregido
             Carbon::today(),
             Carbon::today()->addDays($dias)
         ]);
@@ -250,7 +241,7 @@ class Tarea extends Model
      */
     public function scopeEntreFechas($query, $fechaInicio, $fechaFin)
     {
-        return $query->whereBetween('fecha_tarea', [$fechaInicio, $fechaFin]);
+        return $query->whereBetween('fecha_vencimiento', [$fechaInicio, $fechaFin]); // Corregido
     }
 
     /**
@@ -270,25 +261,7 @@ class Tarea extends Model
     }
 
     /**
-     * Scope para tareas con recordatorio
-     */
-    public function scopeConRecordatorio($query)
-    {
-        return $query->where('tiene_recordatorio', true);
-    }
-
-    /**
-     * Scope para tareas que requieren recordatorio hoy
-     */
-    public function scopeRecordatoriosHoy($query)
-    {
-        return $query->where('tiene_recordatorio', true)
-                    ->whereDate('recordatorio_en', Carbon::today())
-                    ->whereIn('estado', ['pendiente', 'en_progreso']);
-    }
-
-    /**
-     * Accessors
+     * Accessors corregidos
      */
 
     /**
@@ -301,7 +274,8 @@ class Tarea extends Model
             'en_progreso' => 'blue',
             'completada' => 'green',
             'cancelada' => 'red',
-            'pospuesta' => 'gray'
+            'pospuesta' => 'gray',
+            'vencida' => 'red'
         ];
 
         return $colores[$this->estado] ?? 'gray';
@@ -331,7 +305,7 @@ class Tarea extends Model
             return false;
         }
 
-        return $this->fecha_tarea < Carbon::today();
+        return $this->fecha_vencimiento < Carbon::today(); // Corregido
     }
 
     /**
@@ -339,7 +313,7 @@ class Tarea extends Model
      */
     public function getEsHoyAttribute()
     {
-        return $this->fecha_tarea->isToday();
+        return $this->fecha_vencimiento->isToday(); // Corregido
     }
 
     /**
@@ -352,7 +326,7 @@ class Tarea extends Model
         }
 
         $hoy = Carbon::today();
-        $fechaTarea = $this->fecha_tarea;
+        $fechaTarea = $this->fecha_vencimiento; // Corregido
 
         if ($fechaTarea->isToday()) {
             return 0;
@@ -364,68 +338,16 @@ class Tarea extends Model
     }
 
     /**
-     * Accessor para obtener texto de estado humanizado
-     */
-    public function getEstadoHumanoAttribute()
-    {
-        $estados = [
-            'pendiente' => 'Pendiente',
-            'en_progreso' => 'En Progreso',
-            'completada' => 'Completada',
-            'cancelada' => 'Cancelada',
-            'pospuesta' => 'Pospuesta'
-        ];
-
-        return $estados[$this->estado] ?? $this->estado;
-    }
-
-    /**
-     * Accessor para obtener texto de prioridad humanizado
-     */
-    public function getPrioridadHumanaAttribute()
-    {
-        $prioridades = [
-            'baja' => 'Baja',
-            'media' => 'Media',
-            'alta' => 'Alta',
-            'urgente' => 'Urgente'
-        ];
-
-        return $prioridades[$this->prioridad] ?? $this->prioridad;
-    }
-
-    /**
-     * Accessor para obtener texto de tipo humanizado
-     */
-    public function getTipoHumanoAttribute()
-    {
-        $tipos = [
-            'seguimiento' => 'Seguimiento',
-            'cotizacion' => 'Cotización',
-            'mantencion' => 'Mantención',
-            'cobranza' => 'Cobranza',
-            'reunion' => 'Reunión',
-            'llamada' => 'Llamada',
-            'email' => 'Email',
-            'visita' => 'Visita',
-            'administrativa' => 'Administrativa',
-            'personal' => 'Personal'
-        ];
-
-        return $tipos[$this->tipo] ?? $this->tipo;
-    }
-
-    /**
      * Accessor para obtener duración formateada
      */
     public function getDuracionFormateadaAttribute()
     {
-        if (!$this->duracion_estimada) {
+        if (!$this->duracion_estimada_minutos) { // Corregido nombre de columna
             return null;
         }
 
-        $horas = intval($this->duracion_estimada / 60);
-        $minutos = $this->duracion_estimada % 60;
+        $horas = intval($this->duracion_estimada_minutos / 60);
+        $minutos = $this->duracion_estimada_minutos % 60;
 
         if ($horas > 0) {
             return $horas . 'h ' . ($minutos > 0 ? $minutos . 'm' : '');
@@ -435,59 +357,7 @@ class Tarea extends Model
     }
 
     /**
-     * Accessor para obtener información de distribución
-     */
-    public function getInfoDistribucionAttribute()
-    {
-        if (!$this->es_distribuida_automaticamente || !$this->metadata_distribucion) {
-            return null;
-        }
-
-        return $this->metadata_distribucion;
-    }
-
-    /**
-     * Mutators
-     */
-
-    /**
-     * Mutator para validar estado
-     */
-    public function setEstadoAttribute($value)
-    {
-        if (!in_array($value, self::ESTADOS)) {
-            throw new \InvalidArgumentException("Estado '{$value}' no es válido.");
-        }
-
-        $this->attributes['estado'] = $value;
-    }
-
-    /**
-     * Mutator para validar prioridad
-     */
-    public function setPrioridadAttribute($value)
-    {
-        if (!in_array($value, self::PRIORIDADES)) {
-            throw new \InvalidArgumentException("Prioridad '{$value}' no es válida.");
-        }
-
-        $this->attributes['prioridad'] = $value;
-    }
-
-    /**
-     * Mutator para validar tipo
-     */
-    public function setTipoAttribute($value)
-    {
-        if (!in_array($value, self::TIPOS)) {
-            throw new \InvalidArgumentException("Tipo '{$value}' no es válido.");
-        }
-
-        $this->attributes['tipo'] = $value;
-    }
-
-    /**
-     * Métodos de negocio
+     * Métodos de negocio corregidos
      */
 
     /**
@@ -497,7 +367,7 @@ class Tarea extends Model
     {
         $this->update([
             'estado' => 'completada',
-            'completada_en' => Carbon::now(),
+            'fecha_completada' => Carbon::now(), // Corregido
             'resultado' => $resultado,
         ]);
 
@@ -518,143 +388,15 @@ class Tarea extends Model
      */
     public function posponer($nuevaFecha, $motivo = null)
     {
-        $fechaAnterior = $this->fecha_tarea;
+        $fechaAnterior = $this->fecha_vencimiento; // Corregido
         
         $this->update([
-            'fecha_tarea' => $nuevaFecha,
+            'fecha_vencimiento' => $nuevaFecha, // Corregido
             'estado' => 'pospuesta',
             'notas' => $this->notas . "\n[" . Carbon::now()->format('d/m/Y H:i') . "] Pospuesta de {$fechaAnterior->format('d/m/Y')} a {$nuevaFecha->format('d/m/Y')}" . ($motivo ? " - Motivo: {$motivo}" : "")
         ]);
 
         return $this;
-    }
-
-    /**
-     * Iniciar tarea
-     */
-    public function iniciar()
-    {
-        $this->update([
-            'estado' => 'en_progreso',
-            'hora_inicio' => Carbon::now()
-        ]);
-
-        return $this;
-    }
-
-    /**
-     * Cancelar tarea
-     */
-    public function cancelar($motivo = null)
-    {
-        $this->update([
-            'estado' => 'cancelada',
-            'notas' => $this->notas . "\n[" . Carbon::now()->format('d/m/Y H:i') . "] Cancelada" . ($motivo ? " - Motivo: {$motivo}" : "")
-        ]);
-
-        return $this;
-    }
-
-    /**
-     * Configurar recordatorio
-     */
-    public function configurarRecordatorio($fechaHora, $tipo = 'sistema')
-    {
-        $this->update([
-            'tiene_recordatorio' => true,
-            'recordatorio_en' => $fechaHora,
-            'tipo_recordatorio' => $tipo
-        ]);
-
-        return $this;
-    }
-
-    /**
-     * Calcular duración real si tiene hora inicio y fin
-     */
-    public function calcularDuracionReal()
-    {
-        if (!$this->hora_inicio || !$this->hora_fin) {
-            return null;
-        }
-
-        $inicio = Carbon::parse($this->hora_inicio);
-        $fin = Carbon::parse($this->hora_fin);
-
-        return $fin->diffInMinutes($inicio);
-    }
-
-    /**
-     * Verificar si puede ser editada
-     */
-    public function puedeSerEditada()
-    {
-        return !in_array($this->estado, ['completada', 'cancelada']);
-    }
-
-    /**
-     * Verificar si puede ser eliminada
-     */
-    public function puedeSerEliminada()
-    {
-        // No se pueden eliminar tareas automáticas completadas
-        if ($this->es_distribuida_automaticamente && $this->estado === 'completada') {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Duplicar tarea para otra fecha
-     */
-    public function duplicar($nuevaFecha, $usuarioId = null)
-    {
-        $nuevaTarea = $this->replicate([
-            'fecha_tarea',
-            'estado',
-            'completada_en',
-            'resultado',
-            'hora_inicio',
-            'hora_fin',
-            'recordatorio_en'
-        ]);
-
-        $nuevaTarea->fecha_tarea = $nuevaFecha;
-        $nuevaTarea->estado = 'pendiente';
-        $nuevaTarea->es_distribuida_automaticamente = false;
-        $nuevaTarea->origen = 'manual';
-
-        if ($usuarioId) {
-            $nuevaTarea->usuario_id = $usuarioId;
-        }
-
-        $nuevaTarea->save();
-
-        return $nuevaTarea;
-    }
-
-    /**
-     * Obtener resumen de la tarea para notificaciones
-     */
-    public function getResumenAttribute()
-    {
-        $resumen = $this->titulo;
-        
-        if ($this->cliente) {
-            $resumen .= " - {$this->cliente->nombre_institucion}";
-        }
-
-        if ($this->es_vencida) {
-            $diasVencidos = abs($this->dias_restantes);
-            $resumen .= " (Vencida hace {$diasVencidos} día" . ($diasVencidos !== 1 ? 's' : '') . ")";
-        } elseif ($this->es_hoy) {
-            $resumen .= " (Hoy)";
-        } elseif ($this->dias_restantes > 0) {
-            $resumen .= " (En {$this->dias_restantes} día" . ($this->dias_restantes !== 1 ? 's' : '') . ")";
-        }
-
-        return $resumen;
     }
 
     /**
@@ -671,7 +413,7 @@ class Tarea extends Model
             ->hoy()
             ->whereIn('estado', ['pendiente', 'en_progreso'])
             ->orderBy('prioridad', 'desc')
-            ->orderBy('hora_inicio', 'asc')
+            ->orderBy('hora_estimada', 'asc') // Corregido
             ->get();
     }
 
@@ -689,7 +431,7 @@ class Tarea extends Model
             $query->estaSemana();
         }
 
-        return $query->sum('duracion_estimada') ?? 0;
+        return $query->sum('duracion_estimada_minutos') ?? 0; // Corregido
     }
 
     /**

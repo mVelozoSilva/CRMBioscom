@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Cliente extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $table = 'clientes';
 
@@ -28,7 +28,7 @@ class Cliente extends Model
         'vendedores_a_cargo' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+    
     ];
 
     // Validaciones personalizadas

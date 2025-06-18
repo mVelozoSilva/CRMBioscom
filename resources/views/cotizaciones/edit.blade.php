@@ -1,262 +1,152 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    
-    <title>Editar Cotización - CRM Bioscom</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Vite Assets -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
-    <!-- CSS Variables para Paleta Bioscom -->
-    <style>
-        :root {
-            --bioscom-primary: #6284b8;
-            --bioscom-secondary: #5f87b8;
-            --bioscom-accent: #00334e;
-            --bioscom-background: #f3f6fa;
-            --bioscom-text-primary: #00334e;
-        }
-        
-        body { 
-            background-color: var(--bioscom-background); 
-            color: var(--bioscom-text-primary);
-            font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
-        }
-        
-        .topbar { 
-            background-color: #ffffff; 
-            color: var(--bioscom-text-primary); 
-            padding: 15px 30px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        
-        .topbar .logo { 
-            font-size: 1.5em; 
-            font-weight: bold; 
-            color: var(--bioscom-primary); 
-        }
-        
-        .topbar nav ul { 
-            list-style: none; 
-            padding: 0; 
-            margin: 0; 
-            display: flex; 
-        }
-        
-        .topbar nav ul li { 
-            margin-left: 25px; 
-        }
-        
-        .topbar nav ul li a { 
-            color: var(--bioscom-text-primary); 
-            text-decoration: none; 
-            display: block; 
-            padding: 5px 0; 
-            transition: color 0.3s ease; 
-            position: relative; 
-        }
-        
-        .topbar nav ul li a::after { 
-            content: ''; 
-            position: absolute; 
-            width: 0; 
-            height: 2px; 
-            bottom: 0; 
-            left: 0; 
-            background-color: var(--bioscom-secondary); 
-            transition: width .3s ease-in-out; 
-        }
-        
-        .topbar nav ul li a:hover::after, 
-        .topbar nav ul li a.active::after { 
-            width: 100%; 
-        }
-        
-        .topbar nav ul li a:hover, 
-        .topbar nav ul li a.active { 
-            color: var(--bioscom-secondary); 
-        }
-        
-        .main-content {
-            padding: 30px;
-            max-width: 1200px;
-            margin: 30px auto;
-        }
-        
-        .breadcrumb-container {
-            margin-bottom: 30px;
-        }
-        
-        .breadcrumb {
-            background-color: transparent;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .breadcrumb-item + .breadcrumb-item::before {
-            content: ">";
-            color: var(--bioscom-primary);
-        }
-        
-        .breadcrumb-item a {
-            color: var(--bioscom-primary);
-            text-decoration: none;
-        }
-        
-        .breadcrumb-item.active {
-            color: var(--bioscom-text-primary);
-        }
-        
-        .page-header {
-            background-color: white;
-            padding: 20px 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-            border-left: 4px solid var(--bioscom-primary);
-        }
-        
-        .page-title {
-            color: var(--bioscom-text-primary);
-            margin: 0;
-            font-size: 1.8em;
-            font-weight: 600;
-        }
-        
-        .page-subtitle {
-            color: #6c757d;
-            margin: 5px 0 0 0;
-            font-size: 1em;
-        }
-    </style>
-</head>
-<body>
-    <!-- Navegación principal -->
-    <div class="topbar">
-        <div class="logo">Bioscom CRM</div>
-        <nav>
-            <ul>
-                <li><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                <li><a href="{{ route('clientes.index') }}">Clientes</a></li>
-                <li><a href="{{ route('productos.index') }}">Productos</a></li>
-                <li><a href="{{ route('cotizaciones.index') }}" class="active">Cotizaciones</a></li>
-                <li><a href="#">Ventas</a></li>
-                <li><a href="#">Seguimiento</a></li>
-                <li><a href="#">Tareas</a></li>
-                <li><a href="#">Servicio Técnico</a></li>
-                <li><a href="#">Cobranzas</a></li>
-                <li><a href="#">Informes</a></li>
-            </ul>
-        </nav>
+@extends('layouts.app')
+
+@section('content')
+<div class="max-w-7xl mx-auto">
+    <!-- Breadcrumb -->
+    <nav class="mb-6" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm text-gray-600">
+            <li>
+                <a href="{{ route('dashboard') }}" class="hover:text-bioscom-primary transition-colors">
+                    <i class="fas fa-home mr-1"></i>Dashboard
+                </a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <a href="{{ route('cotizaciones.index') }}" class="hover:text-bioscom-primary transition-colors">
+                    Cotizaciones
+                </a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li>
+                <a href="{{ route('cotizaciones.show', $cotizacion) }}" class="hover:text-bioscom-primary transition-colors">
+                    {{ $cotizacion->codigo }}
+                </a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li class="text-gray-800 font-medium">Editar</li>
+        </ol>
+    </nav>
+
+    <!-- Header de la página -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                    <i class="fas fa-edit text-bioscom-primary mr-3"></i>
+                    Editar Cotización
+                </h1>
+                <p class="text-gray-600">
+                    Modificando: <span class="font-medium">{{ $cotizacion->nombre_cotizacion }}</span> 
+                    ({{ $cotizacion->codigo }})
+                </p>
+            </div>
+            <div class="text-right">
+                <div class="text-xs text-gray-500 uppercase font-semibold tracking-wide">Estado Actual</div>
+                <div class="text-lg font-bold px-3 py-1 rounded-lg
+                    {{ $cotizacion->estado === 'Ganada' ? 'bg-green-100 text-green-800' : '' }}
+                    {{ $cotizacion->estado === 'Perdida' ? 'bg-red-100 text-red-800' : '' }}
+                    {{ $cotizacion->estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                    {{ $cotizacion->estado === 'Enviada' ? 'bg-blue-100 text-blue-800' : '' }}
+                ">
+                    {{ $cotizacion->estado }}
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Contenido principal -->
-    <div class="main-content">
-        <!-- Breadcrumb -->
-        <div class="breadcrumb-container">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('cotizaciones.index') }}">Cotizaciones</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Editar</li>
-                </ol>
-            </nav>
-        </div>
-        
-        <!-- Header de la página -->
-        <div class="page-header">
-            <h1 class="page-title">Editar Cotización</h1>
-            <p class="page-subtitle">
-                <strong>Código:</strong> {{ $initialCotizacion->codigo ?? 'Sin código' }} | 
-                <strong>Cliente:</strong> {{ $initialCotizacion->cliente->nombre_institucion ?? 'N/A' }} |
-                <strong>Estado:</strong> <span class="badge bg-secondary">{{ $initialCotizacion->estado }}</span>
-            </p>
-        </div>
-        
-        <!-- Mensajes de alerta -->
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <!-- Información rápida de la cotización -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-calendar text-blue-600"></i>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Creada</p>
+                    <p class="text-sm font-semibold text-gray-900">{{ $cotizacion->created_at->format('d/m/Y') }}</p>
+                </div>
             </div>
-        @endif
+        </div>
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-building text-green-600"></i>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Cliente</p>
+                    <p class="text-sm font-semibold text-gray-900">
+                        {{ $cotizacion->cliente->nombre_institucion ?? $cotizacion->nombre_institucion }}
+                    </p>
+                </div>
             </div>
-        @endif
-        
-        <!-- Información de debug temporal -->
-        <div class="alert alert-info">
-            <strong>🔧 Debug Info (Edición):</strong>
-            <ul class="mb-0">
-                <li>✅ Vista edit.blade.php con estructura completa</li>
-                <li>📊 Cotización ID: {{ $initialCotizacion->id }}</li>
-                <li>📝 Nombre: {{ $initialCotizacion->nombre_cotizacion }}</li>
-                <li>💰 Total: ${{ number_format($initialCotizacion->total_con_iva, 2, ',', '.') }}</li>
-                <li>🗂️ Cliente cargado: {{ $initialCotizacion->cliente ? '✅ Sí' : '❌ No' }}</li>
-            </ul>
         </div>
-        
-        <!-- Componente Vue con datos iniciales -->
-        <div id="app">
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-clock text-yellow-600"></i>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Vence</p>
+                    <p class="text-sm font-semibold text-gray-900">
+                        @if($cotizacion->validez_oferta)
+                            {{ is_string($cotizacion->validez_oferta) ? \Carbon\Carbon::parse($cotizacion->validez_oferta)->format('d/m/Y') : $cotizacion->validez_oferta->format('d/m/Y') }}
+                        @else
+                            No definida
+                        @endif
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-dollar-sign text-purple-600"></i>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total</p>
+                    <p class="text-sm font-semibold text-gray-900">${{ number_format($cotizacion->total_con_iva, 0, ',', '.') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario Vue de Cotización (MODO EDICIÓN) -->
+    <div id="app">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
             <cotizacion-form 
-                :initial-cotizacion="{{ $initialCotizacion->toJson() }}"
-                :clientes="[]">
-            </cotizacion-form>
-        </div>
-        
-        <!-- Enlaces de navegación rápida -->
-        <div class="mt-4 text-center">
-            <a href="{{ route('cotizaciones.show', $initialCotizacion->id) }}" class="btn btn-outline-primary me-2">
-                <i class="fas fa-eye"></i> Ver Cotización
-            </a>
-            <a href="{{ route('cotizaciones.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-list"></i> Volver al Listado
-            </a>
+                :initial-cotizacion="{{ json_encode($cotizacionData) }}"
+                
+            ></cotizacion-form>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Font Awesome -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
-
-    <!-- Script para debugging y funcionalidad -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🌟 Vista edit.blade.php cargada con estructura completa');
-        console.log('📱 Elemento #app existe:', document.getElementById('app') !== null);
-        console.log('🗂️ Cotización inicial:', @json($initialCotizacion));
+    <!-- Enlaces de navegación rápida -->
+    <div class="mt-6 flex flex-wrap gap-3 justify-center">
+        <a href="{{ route('cotizaciones.show', $cotizacion) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bioscom-primary transition-colors">
+            <i class="fas fa-eye mr-2 text-gray-500"></i>
+            Ver Cotización
+        </a>
         
-        // Verificar que Vue se está cargando
-        setTimeout(() => {
-            const appElement = document.querySelector('#app');
-            console.log('🔍 Componente Vue cargado:', appElement ? '✅ Sí' : '❌ No');
-            console.log('📦 Contenido del #app:', appElement ? appElement.innerHTML.length + ' caracteres' : 'N/A');
-        }, 2000);
+        <a href="{{ route('cotizaciones.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bioscom-primary transition-colors">
+            <i class="fas fa-list mr-2 text-gray-500"></i>
+            Todas las Cotizaciones
+        </a>
         
-        // Auto-dismiss alerts después de 5 segundos
-        setTimeout(() => {
-            const alerts = document.querySelectorAll('.alert-dismissible');
-            alerts.forEach(alert => {
-                const closeBtn = alert.querySelector('.btn-close');
-                if (closeBtn) closeBtn.click();
-            });
-        }, 5000);
-    });
-    </script>
-</body>
-</html>
+        <button class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm bg-green-600 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+            <i class="fas fa-copy mr-2"></i>
+            Duplicar Cotización
+        </button>
+    </div>
+</div>
+@endsection

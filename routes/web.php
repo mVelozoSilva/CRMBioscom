@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ContactoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\SeguimientoController;
@@ -13,65 +14,53 @@ use App\Http\Controllers\TriajeController;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes - Rutas para vistas Blade (LIMPIADO)
+| Web Routes - Solo vistas Blade y acciones web
 |--------------------------------------------------------------------------
+| Estas rutas devuelven páginas HTML (vistas Blade)
 */
 
 // =============================================================================
-// RUTAS PRINCIPALES
+// DASHBOARD PRINCIPAL
 // =============================================================================
 
-// --- Dashboard ---
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-// --- Módulos CRUD Principales ---
+// =============================================================================
+// MÓDULOS CRUD PRINCIPALES (Vistas Blade)
+// =============================================================================
+
+// --- Clientes ---
 Route::resource('clientes', ClienteController::class);
+
+// --- Productos ---
 Route::resource('productos', ProductoController::class);
+
+// --- Cotizaciones ---
 Route::resource('cotizaciones', CotizacionController::class);
 
+// --- Contactos ---
+Route::resource('contactos', ContactoController::class);
+
 // =============================================================================
-// MÓDULO DE SEGUIMIENTO (CRÍTICO)
+// MÓDULO DE SEGUIMIENTO (CRÍTICO) - Solo vistas y acciones web
 // =============================================================================
 
 Route::prefix('seguimiento')->name('seguimiento.')->group(function () {
+    // Vista principal (devuelve Blade)
     Route::get('/', [SeguimientoController::class, 'index'])->name('index');
+    
+    // Acciones CRUD individuales (para formularios web)
     Route::post('/', [SeguimientoController::class, 'store'])->name('store');
     Route::put('/{seguimiento}', [SeguimientoController::class, 'update'])->name('update');
     Route::delete('/{seguimiento}', [SeguimientoController::class, 'destroy'])->name('destroy');
+    
+    // Acciones masivas (para formularios web)
     Route::post('/update-masivo', [SeguimientoController::class, 'updateMasivo'])->name('update-masivo');
     Route::post('/importar', [SeguimientoController::class, 'importar'])->name('importar');
 });
 
 // =============================================================================
-// APIS PARA AUTOCOMPLETADO (Usadas por Vue.js)
-// =============================================================================
-
-Route::prefix('api')->name('api.')->group(function () {
-    // Búsquedas para autocompletado
-    Route::get('/buscar-clientes', [ClienteController::class, 'buscarClientes'])->name('buscar-clientes');
-    Route::get('/buscar-productos', [ProductoController::class, 'buscarProductos'])->name('buscar-productos');
-    
-    // Datos específicos para componentes Vue
-    Route::get('/cliente/{cliente}', [ClienteController::class, 'show'])->name('cliente.show');
-    Route::get('/producto/{producto}', [ProductoController::class, 'show'])->name('producto.show');
-    
-    // APIs del módulo de seguimiento
-    Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
-    Route::get('/seguimiento/data', [SeguimientoController::class, 'getSeguimientos'])->name('seguimiento.data');
-    Route::post('/seguimiento/update-masivo', [SeguimientoController::class, 'updateMasivo'])->name('seguimiento.update-masivo');
-    Route::get('/seguimiento/buscar-clientes', [SeguimientoController::class, 'buscarClientes'])->name('seguimiento.buscar-clientes');
-    Route::get('/seguimiento/vendedores', [SeguimientoController::class, 'getVendedores'])->name('seguimiento.vendedores');
-    
-    // APIs del triaje
-    Route::get('/triaje/seguimientos', [TriajeController::class, 'getSeguimientosClasificados'])->name('triaje.seguimientos');
-    Route::get('/triaje/vendedores', [TriajeController::class, 'getVendedoresDisponibles'])->name('triaje.vendedores');
-    
-    // APIs de agenda
-    Route::get('/agenda/tareas', [AgendaController::class, 'obtenerTareas'])->name('agenda.tareas');
-});
-
-// =============================================================================
-// SISTEMA DE TRIAJE INTELIGENTE
+// SISTEMA DE TRIAJE INTELIGENTE (Vistas Blade)
 // =============================================================================
 
 Route::prefix('triaje')->name('triaje.')->group(function () {
@@ -83,7 +72,7 @@ Route::prefix('triaje')->name('triaje.')->group(function () {
 });
 
 // =============================================================================
-// AGENDA ELECTRÓNICA MULTIFUNCIONAL
+// AGENDA ELECTRÓNICA MULTIFUNCIONAL (Vistas Blade)
 // =============================================================================
 
 Route::middleware(['auth'])->prefix('agenda')->name('agenda.')->group(function () {
@@ -92,7 +81,7 @@ Route::middleware(['auth'])->prefix('agenda')->name('agenda.')->group(function (
     Route::get('/mi-dia', [AgendaController::class, 'miDia'])->name('mi-dia');
     Route::get('/mi-semana', [AgendaController::class, 'miSemana'])->name('mi-semana');
     
-    // Gestión de tareas
+    // Gestión de tareas (formularios web)
     Route::post('/tareas', [AgendaController::class, 'crear'])->name('tareas.crear');
     Route::put('/tareas/{tarea}', [AgendaController::class, 'actualizar'])->name('tareas.actualizar');
     Route::post('/tareas/{tarea}/completar', [AgendaController::class, 'completarTarea'])->name('tareas.completar');

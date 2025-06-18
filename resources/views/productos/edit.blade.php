@@ -600,7 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Crear un formulario temporal para duplicar
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = `/api/productos/{{ $producto->id }}/duplicar`;
+            form.action = `/crm-bioscom/public/api/productos/{{ $producto->id }}/duplicar`;
             
             const csrf = document.createElement('input');
             csrf.type = 'hidden';

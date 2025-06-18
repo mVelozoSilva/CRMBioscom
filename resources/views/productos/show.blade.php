@@ -635,7 +635,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Función para previsualizar producto
 async function previsualizarProducto() {
     try {
-        const response = await fetch('/api/productos/previsualizar-constructor', {
+        const response = await fetch('/crm-bioscom/public/api/productos/previsualizar-constructor', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -666,7 +666,7 @@ async function previsualizarProducto() {
 async function duplicarProducto() {
     if (confirm('¿Estás seguro de que quieres duplicar este producto?')) {
         try {
-            const response = await fetch(`/api/productos/{{ $producto->id }}/duplicar`, {
+            const response = await fetch(`/crm-bioscom/public/api/productos/{{ $producto->id }}/duplicar`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -702,7 +702,7 @@ function crearSeguimiento() {
 // Función para exportar datos
 function exportarDatos() {
     // Implementar exportación de datos del producto
-    window.location.href = `/api/productos/{{ $producto->id }}/exportar`;
+    window.location.href = `/crm-bioscom/public/api/productos/{{ $producto->id }}/exportar`;
 }
 
 // Función para cerrar preview

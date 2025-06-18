@@ -1,25 +1,24 @@
 /* resources/css/app.css */
 
-/* Directivas base de Tailwind CSS v4 */
-@import "tailwindcss";
+/* Directivas base de Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Definición de variables CSS de Bioscom, accesibles globalmente */
 :root {
-    /* Colores Corporativos */
     --bioscom-primary: #6284b8;
     --bioscom-secondary: #5f87b8;
     --bioscom-accent: #00334e;
     --bioscom-background: #f3f6fa;
     --bioscom-text-primary: #00334e;
 
-    /* Colores Funcionales / Estados de Seguimiento */
     --bioscom-success: #28a745;
     --bioscom-warning: #ffc107;
     --bioscom-error: #dc3545;
     --bioscom-info: #17a2b8;
-    --bioscom-neutral: #6c757d; /* Gris para completado/reprogramado */
+    --bioscom-neutral: #6c757d;
 
-    /* Escala de Grises */
     --bioscom-gray-50: #f9fafb;
     --bioscom-gray-100: #f3f4f6;
     --bioscom-gray-200: #e5e7eb;
@@ -45,186 +44,107 @@
     --bioscom-space-lg: 1.5rem;
     --bioscom-space-xl: 2rem;
     --bioscom-space-2xl: 3rem;
+
+    /* Colores para Hover de Botones Primario/Secundario */
+    --bioscom-primary-hover: #557299;
+    --bioscom-secondary-hover: #4a6b94;
+    --bioscom-error-rgb: 220 53 69;
+    --bioscom-success-rgb: 40 167 69;
+
+    /* Variables RGB para Tailwind Ring/Shadow con opacidad */
+    --bioscom-primary-rgb-values: 98, 132, 184; /* Valores RGB sin "rgb()" */
 }
 
-/* Estilos base del body, aplicando las variables CSS */
+/* Estilos base del body */
 body {
     font-family: var(--bioscom-font-primary);
     background-color: var(--bioscom-background);
     color: var(--bioscom-text-primary);
 }
 
-/* Clases personalizadas para componentes - SIN @apply que cause problemas */
-.btn-bioscom {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 0.2s ease-in-out;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-}
+/* Clases personalizadas para componentes */
+@layer components {
+    .btn-bioscom {
+        @apply inline-flex items-center justify-center px-6 py-3 rounded-lg font-medium transition-all duration-200 ease-in-out;
+    }
+    .btn-bioscom-primary {
+        @apply btn-bioscom bg-[var(--bioscom-primary)] text-white hover:shadow-lg hover:-translate-y-0.5;
+        border: 1px solid var(--bioscom-primary);
+    }
+    .btn-bioscom-primary:hover {
+        background-color: var(--bioscom-primary-hover);
+        border-color: var(--bioscom-primary-hover);
+    }
+    .btn-bioscom-secondary {
+        @apply btn-bioscom bg-[var(--bioscom-secondary)] text-white hover:shadow-lg hover:-translate-y-0.5;
+        border: 1px solid var(--bioscom-secondary);
+    }
+    .btn-bioscom-secondary:hover {
+        background-color: var(--bioscom-secondary-hover);
+        border-color: var(--bioscom-secondary-hover);
+    }
+    .btn-bioscom-outline {
+        @apply btn-bioscom bg-transparent border border-[var(--bioscom-gray-300)] text-[var(--bioscom-gray-600)] hover:bg-[var(--bioscom-background)] hover:border-[var(--bioscom-primary)] hover:text-[var(--bioscom-primary)];
+    }
+    .card-bioscom {
+        @apply bg-white border border-[var(--bioscom-gray-200)] rounded-[var(--bioscom-border-radius)] shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+    }
+    .input-bioscom {
+        /* CORREGIDO: Usar rgba() directamente con los valores RGB de la variable */
+        @apply w-full px-3 py-2 border border-[var(--bioscom-gray-300)] rounded-[var(--bioscom-border-radius)] focus:outline-none focus:border-[var(--bioscom-primary)] focus:ring-2 focus:ring-[rgba(var(--bioscom-primary-rgb-values),_0.2)] transition-all duration-200;
+    }
+   .badge-bioscom-primary {
+        /* CORREGIDO: Usar rgba() directamente con los valores RGB de la variable */
+        @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide;
+        background-color: rgba(var(--bioscom-primary-rgb-values), 0.1);
+        color: var(--bioscom-primary);
+    }
+    .badge-bioscom-secondary {
+        /* CORREGIDO: Usar rgba() directamente con los valores RGB de la variable */
+        @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide;
+        background-color: var(--bioscom-gray-100);
+        color: var(--bioscom-gray-600);
+    }
 
-.btn-bioscom-primary {
-    background-color: var(--bioscom-primary);
-    color: white;
-    border: 1px solid var(--bioscom-primary);
-}
-
-.btn-bioscom-primary:hover {
-    background-color: #557299;
-    border-color: #557299;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(98, 132, 184, 0.3);
-}
-
-.btn-bioscom-secondary {
-    background-color: var(--bioscom-secondary);
-    color: white;
-    border: 1px solid var(--bioscom-secondary);
-}
-
-.btn-bioscom-secondary:hover {
-    background-color: #4a6b94;
-    border-color: #4a6b94;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(95, 135, 184, 0.3);
-}
-
-.btn-bioscom-outline {
-    background-color: transparent;
-    border: 1px solid var(--bioscom-gray-300);
-    color: var(--bioscom-gray-600);
-}
-
-.btn-bioscom-outline:hover {
-    background-color: var(--bioscom-background);
-    border-color: var(--bioscom-primary);
-    color: var(--bioscom-primary);
-}
-
-.card-bioscom {
-    background: white;
-    border: 1px solid var(--bioscom-gray-200);
-    border-radius: 0.75rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-}
-
-.card-bioscom:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-.input-bioscom {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--bioscom-gray-300);
-    border-radius: var(--bioscom-border-radius);
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-.input-bioscom:focus {
-    border-color: var(--bioscom-primary);
-    box-shadow: 0 0 0 2px rgba(98, 132, 184, 0.2);
-}
-
-.badge-bioscom-primary {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    background-color: rgba(98, 132, 184, 0.1);
-    color: var(--bioscom-primary);
-}
-
-.badge-bioscom-secondary {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    background-color: var(--bioscom-gray-100);
-    color: var(--bioscom-gray-600);
-}
-
-/* Estados específicos de seguimiento */
-.status-pendiente {
-    background-color: #fef3c7;
-    color: #92400e;
-    border-left: 4px solid #f59e0b;
-}
-
-.status-en-proceso {
-    background-color: #dbeafe;
-    color: #1e40af;
-    border-left: 4px solid #3b82f6;
-}
-
-.status-completado {
-    background-color: #d1fae5;
-    color: #065f46;
-    border-left: 4px solid #10b981;
-}
-
-.status-vencido {
-    background-color: #fee2e2;
-    color: #991b1b;
-    border-left: 4px solid #ef4444;
-}
-
-.status-archivado {
-    background-color: #f3f4f6;
-    color: #4b5563;
-    border-left: 4px solid #6b7280;
-}
-
-/* Prioridades */
-.priority-baja { color: #6b7280; }
-.priority-media { color: #3b82f6; }
-.priority-alta { color: #f59e0b; }
-.priority-urgente { color: #ef4444; font-weight: 600; }
-
-/* Utilidades personalizadas */
-.transition-all {
-    transition: all 0.2s ease-in-out;
-}
-
-.shadow-bioscom {
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-}
-
-.shadow-bioscom-hover {
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.text-bioscom-primary {
-    color: var(--bioscom-primary);
-}
-
-.text-bioscom-secondary {
-    color: var(--bioscom-secondary);
-}
-
-.bg-bioscom-primary {
-    background-color: var(--bioscom-primary);
-}
-
-.bg-bioscom-secondary {
-    background-color: var(--bioscom-secondary);
-}
-
-.border-bioscom-primary {
-    border-color: var(--bioscom-primary);
+    /* Estilos para modales (implementación manual de Bootstrap-like para Tailwind) */
+    .modal {
+        position: fixed; top: 0; left: 0; z-index: 1050; display: none; width: 100%; height: 100%;
+        overflow-x: hidden; overflow-y: auto; outline: 0; background-color: rgba(0, 0, 0, 0.5);
+    }
+    .modal.show { display: block; }
+    .modal-dialog {
+        position: relative; width: auto; margin: 1.75rem auto; pointer-events: none;
+    }
+    .modal-content {
+        position: relative; display: flex; flex-direction: column; width: 100%; pointer-events: auto;
+        background-color: #fff; background-clip: padding-box; border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 0.3rem; outline: 0; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .modal-header {
+        display: flex; flex-shrink: 0; align-items: center; justify-content: space-between;
+        padding: 1rem; border-bottom: 1px solid #dee2e6;
+        border-top-left-radius: calc(0.3rem - 1px); border-top-right-radius: calc(0.3rem - 1px);
+    }
+    .modal-body {
+        position: relative; flex: 1 1 auto; padding: 1rem;
+    }
+    .modal-footer {
+        display: flex; flex-wrap: wrap; flex-shrink: 0; align-items: center; justify-content: flex-end;
+        padding: 0.75rem; border-top: 1px solid #dee2e6;
+        border-bottom-right-radius: calc(0.3rem - 1px); border-bottom-left-radius: calc(0.3rem - 1px);
+    }
+    .btn-close { /* Implementación básica para Tailwind */
+        box-sizing: content-box; width: 1em; height: 1em; padding: 0.25em;
+        color: #000;
+        background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat;
+        border: 0; border-radius: 0.25rem; opacity: 0.5; transition: opacity 0.15s ease-in-out;
+        cursor: pointer;
+    }
+    .btn-close:hover {
+        opacity: 0.75;
+    }
+    /* Media queries para modales grandes en pantallas md y lg */
+    @media (min-width: 576px) { .modal-dialog { max-width: 500px; } }
+    @media (min-width: 992px) { .modal-lg, .modal-xl { max-width: 800px; } }
+    @media (min-width: 1200px) { .modal-xl { max-width: 1140px; } }
 }

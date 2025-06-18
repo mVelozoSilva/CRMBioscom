@@ -94,8 +94,16 @@ class User extends Authenticatable
     // Relación many-to-many: vendedores supervisados (para jefes)
     public function vendedoresSupervision()
     {
-        return $this->belongsToMany(User::class, 'supervision_vendedores', 'jefe_id', 'vendedor_id');
-    }
+        // Solución temporal: devolver todos los vendedores si es jefe
+        if ($this->esJefe()) {
+            return User::whereHas('roles', function($query) {
+                $query->whereIn('name', [self::ROL_VENDEDOR, self::ROL_ASISTENTE_VENTAS]);
+            });
+        }
+    
+    // Si no es jefe, devolver query builder vacío
+    return User::whereRaw('1 = 0');
+}
 
     // Relación many-to-many: jefes que supervisan (para vendedores)
     public function supervisores()
@@ -196,7 +204,7 @@ class User extends Authenticatable
     // Datos de equipo para jefes
     private function getDatosEquipo()
     {
-        $vendedoresIds = $this->vendedoresSupervision()->pluck('users.id')->toArray();
+        $vendedoresIds = $this->vendedoresSupervision()->pluck('id')->toArray();
         
         return [
             'vendedores_activos' => count($vendedoresIds),

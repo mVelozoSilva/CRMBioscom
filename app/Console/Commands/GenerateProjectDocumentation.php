@@ -253,7 +253,7 @@ class GenerateProjectDocumentation extends Command
             if (!empty($matches[2])) {
                 foreach ($matches[2] as $i => $route) {
                     $method = strtoupper($matches[1][$i]);
-                    $doc .= "- **{$method}** `/api/{$route}`\n";
+                    $doc .= "- **{$method}** `/crm-bioscom/public/api/{$route}`\n";
                 }
             }
             $doc .= "\n";

@@ -10,7 +10,7 @@ use App\Enums\ModalidadSeguimiento;
 
 class Cotizacion extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $table = 'cotizaciones';
 
@@ -46,7 +46,7 @@ class Cotizacion extends Model
     ];
 
     protected $casts = [
-        'validez_oferta' => 'date',
+        'validez_oferta' => 'string',
         'productos_cotizados' => 'array',
         'total_neto' => 'decimal:2',
         'iva' => 'decimal:2',
@@ -60,8 +60,8 @@ class Cotizacion extends Model
         'dias_seguimiento_amarillo' => 'integer',
         'dias_seguimiento_rojo' => 'integer',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'updated_at' => 'datetime'
+        
     ];
 
     // Estados de cotización
@@ -184,17 +184,29 @@ class Cotizacion extends Model
 
     // Recalcular totales basado en productos
     public function recalcularTotales()
-    {
-        if (!$this->productos_cotizados || empty($this->productos_cotizados)) {
-            $this->total_neto = 0;
-            $this->iva = 0;
-            $this->total_con_iva = 0;
-            return;
-        }
+{
+    if (!$this->productos_cotizados || empty($this->productos_cotizados)) {
+        $this->total_neto = 0;
+        $this->iva = 0;
+        $this->total_con_iva = 0;
+        return;
+    }
 
-        $total_neto = 0;
-        
-        foreach ($this->productos_cotizados as $producto) {
+    // Asegurar que productos_cotizados sea un array
+    $productos = is_string($this->productos_cotizados) 
+        ? json_decode($this->productos_cotizados, true) 
+        : $this->productos_cotizados;
+    
+    if (!is_array($productos) || empty($productos)) {
+        $this->total_neto = 0;
+        $this->iva = 0;
+        $this->total_con_iva = 0;
+        return;
+    }
+
+    $total_neto = 0;
+    
+    foreach ($productos as $producto) {
             $cantidad = $producto['cantidad'] ?? 1;
             $precio = $producto['precio_unitario'] ?? 0;
             $descuento = $producto['descuento'] ?? 0;

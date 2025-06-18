@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(document.getElementById('form-filtros'));
             const params = new URLSearchParams(formData);
             
-            const response = await fetch(`/api/triaje/seguimientos?${params}`);
+            const response = await fetch(`/crm-bioscom/public/api/triaje/seguimientos?${params}`);
             const data = await response.json();
             
             if (data.success) {

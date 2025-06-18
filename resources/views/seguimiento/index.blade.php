@@ -77,7 +77,7 @@
         <!-- COMPONENTE VUE DE SEGUIMIENTO -->
         <seguimiento-table 
             :vendedores="{{ json_encode($vendedores ?? []) }}"
-            :puede-importar="{{ auth()->user()->esJefe() || auth()->user()->esAdministrador() ? 'true' : 'false' }}"
+            :puede-importar="true"
         ></seguimiento-table>
 
         <!-- AYUDA Y ATAJOS DE TECLADO -->
@@ -114,8 +114,8 @@
             </div>
         </div>
 
-        <!-- DISTRIBUCIÓN AUTOMÁTICA (SOLO JEFES) -->
-        @if(auth()->user()->esJefe())
+        {{-- DISTRIBUCIÓN AUTOMÁTICA (SOLO JEFES) 
+        @if(auth()->user()->esJefe()) --}}
         <div class="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
             <h3 class="text-sm font-medium text-purple-900 mb-3">
                 <i class="fas fa-magic mr-1"></i>
@@ -129,10 +129,10 @@
                 <div class="flex-1">
                     <label class="block text-xs font-medium text-purple-700 mb-1">Máximo por día</label>
                     <select id="max-por-dia" class="form-select text-xs">
-                        <option value="3">3 seguimientos</option>
-                        <option value="5" selected>5 seguimientos</option>
-                        <option value="7">7 seguimientos</option>
-                        <option value="10">10 seguimientos</option>
+                        <option value="5">5 seguimientos</option>
+                        <option value="10" selected>10 seguimientos</option>
+                        <option value="15">15 seguimientos</option>
+                        <option value="20">20 seguimientos</option>
                     </select>
                 </div>
                 
@@ -140,9 +140,9 @@
                     <label class="block text-xs font-medium text-purple-700 mb-1">Días a distribuir</label>
                     <select id="dias-distribucion" class="form-select text-xs">
                         <option value="5" selected>5 días</option>
-                        <option value="7">7 días</option>
                         <option value="10">10 días</option>
                         <option value="15">15 días</option>
+                        <option value="20">20 días</option>
                     </select>
                 </div>
                 
@@ -157,18 +157,18 @@
                 </div>
             </div>
         </div>
-        @endif
+        {{-- @endif --}}
     </div>
 </div>
 
-<!-- MODAL DE DISTRIBUCIÓN (SOLO JEFES) -->
-@if(auth()->user()->esJefe())
+{{-- MODAL DE DISTRIBUCIÓN (SOLO JEFES)
+@if(auth()->user()->esJefe()) --}}
 <div id="modal-distribucion" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="mt-3">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Distribución Automática</h3>
             <div id="resultado-distribucion" class="space-y-3">
-                <!-- Se llena dinámicamente -->
+               Se llena dinámicamente 
             </div>
             <div class="flex justify-end mt-6">
                 <button 
@@ -181,10 +181,10 @@
         </div>
     </div>
 </div>
-@endif
-@endsection
+{{--@endif--}}
+@endsection 
 
-@push('scripts')
+@push('scripts') 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Atajos de teclado
@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
  * ACTUALIZAR CONTADORES DE ESTADÍSTICAS
  */
 function actualizarContadores() {
-    fetch('/api/seguimiento/data?solo_estadisticas=1')
+    fetch('/crm-bioscom/public/api/seguimiento/data?solo_estadisticas=1')
         .then(response => response.json())
         .then(data => {
             if (data.success && data.estadisticas) {
@@ -270,10 +270,10 @@ function actualizarContadores() {
         .catch(error => console.error('Error al actualizar contadores:', error));
 }
 
-@if(auth()->user()->esJefe())
-/**
- * DISTRIBUCIÓN AUTOMÁTICA DE SEGUIMIENTOS VENCIDOS
- */
+{{{-- @if(auth()->user()->esJefe()) --}}}
+
+  DISTRIBUCIÓN AUTOMÁTICA DE SEGUIMIENTOS VENCIDOS
+ 
 function distribuirSeguimientosVencidos() {
     const maxPorDia = document.getElementById('max-por-dia').value;
     const diasDistribucion = document.getElementById('dias-distribucion').value;
@@ -283,7 +283,7 @@ function distribuirSeguimientosVencidos() {
     }
     
     // Obtener vendedores del equipo
-    fetch('/api/seguimiento/vendedores')
+    fetch('/crm-bioscom/public/api/seguimiento/vendedores')
         .then(response => response.json())
         .then(vendedores => {
             const vendedorIds = vendedores.map(v => v.id);
@@ -357,7 +357,7 @@ function mostrarResultadoDistribucion(resultado) {
 function cerrarModalDistribucion() {
     document.getElementById('modal-distribucion').classList.add('hidden');
 }
-@endif
+{{--@endif--}}
 
 // Hacer disponible para el componente Vue
 window.actualizarContadores = actualizarContadores;

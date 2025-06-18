@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Producto extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $table = 'productos';
 
@@ -36,8 +36,8 @@ class Producto extends Model
         'frecuencia_mantencion_meses' => 'integer',
         'stock_minimo' => 'integer',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'updated_at' => 'datetime'
+        
     ];
 
     // Estados válidos

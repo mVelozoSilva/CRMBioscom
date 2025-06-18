@@ -304,38 +304,54 @@ class ProductoController extends Controller
      * API: Búsqueda de productos para autocompletado
      * Utilizado en formularios de cotización
      */
-    public function buscarProductos(Request $request)
-    {
+    /**
+ * Buscar productos para autocompletado (API)
+ */
+public function buscarProductos(Request $request)
+{
+    try {
         $query = $request->get('q', '');
-        $categoria = $request->get('categoria');
-        $limite = $request->get('limit', 20);
+        
+        \Log::info('🔍 Búsqueda de productos iniciada:', [
+            'query' => $query,
+            'request_all' => $request->all()
+        ]);
+        
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
 
-        $productos = Producto::where('estado', 'Activo')
+        $productos = \App\Models\Producto::where('estado', 'Activo')
             ->where(function($q) use ($query) {
                 $q->where('nombre', 'like', "%{$query}%")
-                  ->orWhere('descripcion', 'like', "%{$query}%");
+                  ->orWhere('descripcion', 'like', "%{$query}%")
+                  ->orWhere('categoria', 'like', "%{$query}%");
             })
-            ->when($categoria, function($q) use ($categoria) {
-                $q->where('categoria', $categoria);
-            })
-            ->select('id', 'nombre', 'descripcion', 'precio_neto', 'categoria', 'imagenes')
-            ->limit($limite)
-            ->get()
-            ->map(function($producto) {
-                return [
-                    'id' => $producto->id,
-                    'nombre' => $producto->nombre,
-                    'descripcion' => Str::limit($producto->descripcion, 100),
-                    'precio_neto' => $producto->precio_neto,
-                    'precio_formateado' => '$' . number_format($producto->precio_neto, 0, ',', '.'),
-                    'categoria' => $producto->categoria,
-                    'imagen_principal' => $this->obtenerImagenPrincipal($producto),
-                    'bloques_contenido' => $producto->bloques_contenido
-                ];
-            });
+            ->select('id', 'nombre', 'descripcion', 'precio_neto', 'categoria')
+            ->limit(10)
+            ->get();
+
+        \Log::info('✅ Resultados de búsqueda de productos:', [
+            'query' => $query,
+            'resultados_count' => $productos->count(),
+            'resultados' => $productos->toArray()
+        ]);
 
         return response()->json($productos);
+
+    } catch (\Exception $e) {
+        \Log::error('❌ Error en búsqueda de productos:', [
+            'error' => $e->getMessage(),
+            'query' => $request->get('q'),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+
+        return response()->json([
+            'error' => 'Error en la búsqueda: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * API: Obtener detalles completos de un producto

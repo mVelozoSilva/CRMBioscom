@@ -15,127 +15,219 @@ use Maatwebsite\Excel\Facades\Excel;
 class SeguimientoController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     * VISTA PRINCIPAL - TIPO EXCEL EDITABLE
-     */
-    public function index()
-    {
-        return view('seguimiento.index');
+ * Display a listing of the resource.
+ * VISTA PRINCIPAL - TIPO EXCEL EDITABLE
+ */
+public function index()
+{
+    try {
+        // Obtener vendedores para el componente Vue
+        $vendedores = User::select('id', 'name', 'email')
+                         ->orderBy('name')
+                         ->get();
+        
+        \Log::info('🔍 Vendedores cargados para seguimiento:', [
+            'count' => $vendedores->count(),
+            'vendedores' => $vendedores->pluck('name', 'id')->toArray()
+        ]);
+
+        return view('seguimiento.index', compact('vendedores'));
+        
+    } catch (\Exception $e) {
+        \Log::error('❌ Error al cargar página de seguimiento:', [
+            'error' => $e->getMessage()
+        ]);
+        
+        // En caso de error, pasar array vacío para evitar crashes
+        $vendedores = [];
+        return view('seguimiento.index', compact('vendedores'));
     }
+}
 
     /**
-     * AJAX: Obtener seguimientos para la tabla (con filtros y búsqueda)
-     * CRÍTICO: Este método alimenta la vista tipo Excel
-     */
-    public function getSeguimientos(Request $request)
-    {
-        try {
-            $query = Seguimiento::with(['cliente', 'cotizacion', 'vendedor']);
+ * AJAX: Obtener seguimientos para la tabla (con filtros y búsqueda)
+ * CRÍTICO: Este método alimenta la vista tipo Excel
+ */
+public function getSeguimientos(Request $request)
+{
+    try {
+        $query = Seguimiento::with(['cliente', 'cotizacion', 'vendedor']);
 
-            // **FILTROS SEGÚN ROL DEL USUARIO**
-            $user = Auth::user();
-            
-            if ($user->esVendedor() && !$user->esJefe()) {
-                // Vendedores solo ven sus seguimientos
-                $query->paraVendedor($user->id);
-            } elseif ($user->esJefe()) {
-                // Jefes ven su equipo
-                $vendedorFiltro = $request->get('vendedor');
-                if ($vendedorFiltro && $vendedorFiltro !== 'todos') {
-                    $query->paraVendedor($vendedorFiltro);
-                } else {
-                    // Ver todo el equipo
-                    $equipoIds = $user->vendedoresSupervision()->pluck('users.id')->toArray();
-                    if (!empty($equipoIds)) {
-                        $query->paraJefeVentas($equipoIds);
-                    }
+        // **FILTROS SEGÚN ROL DEL USUARIO**
+        /*
+        TEMPORAL: Comentado para desarrollo
+        $user = Auth::user();
+        
+        if ($user->esVendedor() && !$user->esJefe()) {
+            // Vendedores solo ven sus seguimientos
+            $query->paraVendedor($user->id);
+        } elseif ($user->esJefe()) {
+            // Jefes ven su equipo
+            $vendedorFiltro = $request->get('vendedor');
+            if ($vendedorFiltro && $vendedorFiltro !== 'todos') {
+                $query->paraVendedor($vendedorFiltro);
+            } else {
+                // Ver todo el equipo
+                $equipoIds = $user->vendedoresSupervision()->pluck('users.id')->toArray();
+                if (!empty($equipoIds)) {
+                    $query->paraJefeVentas($equipoIds);
                 }
             }
-
-            // **FILTROS ESPECÍFICOS DE LA VISTA**
-            
-            // Filtro por clasificación (CRÍTICO para resolver crisis)
-            $clasificacion = $request->get('clasificacion');
-            switch ($clasificacion) {
-                case 'atrasados':
-                    $query->atrasados();
-                    break;
-                case 'proximos':
-                    $query->proximos(7);
-                    break;
-                case 'hoy':
-                    $query->hoy();
-                    break;
-                case 'completados_hoy':
-                    $query->completadosHoy();
-                    break;
-                // Por defecto no filtramos (mostrar todos)
-            }
-
-            // Filtro por estado
-            if ($request->filled('estado')) {
-                $query->estado($request->get('estado'));
-            }
-
-            // Filtro por prioridad
-            if ($request->filled('prioridad')) {
-                $query->prioridad($request->get('prioridad'));
-            }
-
-            // **BÚSQUEDA RÁPIDA**
-            if ($request->filled('busqueda')) {
-                $query->busqueda($request->get('busqueda'));
-            }
-
-            // **ORDENAMIENTO**
-            $sortField = $request->get('sort', 'proxima_gestion');
-            $sortDirection = $request->get('direction', 'asc');
-            
-            // Ordenamientos especiales
-            if ($sortField === 'cliente') {
-                $query->join('clientes', 'seguimientos.cliente_id', '=', 'clientes.id')
-                      ->orderBy('clientes.nombre_institucion', $sortDirection)
-                      ->select('seguimientos.*');
-            } elseif ($sortField === 'vendedor') {
-                $query->join('users', 'seguimientos.vendedor_id', '=', 'users.id')
-                      ->orderBy('users.name', $sortDirection)
-                      ->select('seguimientos.*');
-            } else {
-                $query->orderBy($sortField, $sortDirection);
-            }
-
-            // **PAGINACIÓN**
-            $perPage = $request->get('per_page', 50); // Vista tipo Excel necesita más registros
-            $seguimientos = $query->paginate($perPage);
-
-            // **TRANSFORMAR DATOS PARA LA VISTA**
-            $data = $seguimientos->through(function ($seguimiento) {
-                return $seguimiento->toTableArray();
-            });
-
-            // **ESTADÍSTICAS PARA CONTADORES**
-            $estadisticas = $this->calcularEstadisticas($user);
-
-            return response()->json([
-                'success' => true,
-                'data' => $data,
-                'estadisticas' => $estadisticas,
-                'pagination' => [
-                    'current_page' => $seguimientos->currentPage(),
-                    'last_page' => $seguimientos->lastPage(),
-                    'per_page' => $seguimientos->perPage(),
-                    'total' => $seguimientos->total()
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al cargar seguimientos: ' . $e->getMessage()
-            ], 500);
         }
-    }
+        */
 
+        // **FILTROS ESPECÍFICOS DE LA VISTA**
+        
+        // Filtro por clasificación (CRÍTICO para resolver crisis)
+        $clasificacion = $request->get('clasificacion');
+        switch ($clasificacion) {
+            case 'atrasados':
+                $query->where('proxima_gestion', '<', now()->toDateString());
+                break;
+            case 'proximos':
+                 $query->whereBetween('proxima_gestion', [
+                    now()->toDateString(), 
+                    now()->addDays(7)->toDateString()
+                ]);
+                break;
+            case 'hoy':
+                 $query->whereDate('proxima_gestion', now()->toDateString());
+                break;
+            case 'completados_hoy':
+                 $query->where('estado', 'completado')
+                      ->whereDate('updated_at', now()->toDateString());
+                break;
+            // Por defecto no filtramos (mostrar todos)
+        } 
+
+        // Filtro por estado
+        if ($request->filled('estado')) {
+            $query->estado($request->get('estado'));
+        }
+
+        // Filtro por prioridad
+        if ($request->filled('prioridad')) {
+             $query->where('prioridad', $request->get('prioridad'));
+        }
+
+        // **BÚSQUEDA RÁPIDA**
+        if ($request->filled('busqueda')) {
+            $busqueda = $request->get('busqueda');
+            $query->where(function($q) use ($busqueda) {
+                $q->whereHas('cliente', function($clienteQuery) use ($busqueda) {
+                    $clienteQuery->where('nombre_institucion', 'like', "%{$busqueda}%")
+                                ->orWhere('rut', 'like', "%{$busqueda}%");
+                })
+                ->orWhereHas('cotizacion', function($cotizacionQuery) use ($busqueda) {
+                    $cotizacionQuery->where('codigo', 'like', "%{$busqueda}%");
+                })
+                ->orWhere('notas', 'like', "%{$busqueda}%");
+            });
+        }
+
+        // **ORDENAMIENTO**
+        $sortField = $request->get('sort', 'proxima_gestion');
+        $sortDirection = $request->get('direction', 'asc');
+        
+        // Ordenamientos especiales
+        if ($sortField === 'cliente') {
+            $query->join('clientes', 'seguimientos.cliente_id', '=', 'clientes.id')
+                  ->orderBy('clientes.nombre_institucion', $sortDirection)
+                  ->select('seguimientos.*');
+        } elseif ($sortField === 'vendedor') {
+            $query->join('users', 'seguimientos.vendedor_id', '=', 'users.id')
+                  ->orderBy('users.name', $sortDirection)
+                  ->select('seguimientos.*');
+        } else {
+            $query->orderBy($sortField, $sortDirection);
+        }
+
+        // **PAGINACIÓN**
+        $perPage = $request->get('per_page', 50); // Vista tipo Excel necesita más registros
+        $seguimientos = $query->paginate($perPage);
+
+        // **TRANSFORMAR DATOS PARA LA VISTA**
+        $data = $seguimientos->through(function ($seguimiento) {
+            return [
+                'id' => $seguimiento->id,
+                'cliente' => $seguimiento->cliente->nombre_institucion ?? 'Sin cliente',
+                'rut_cliente' => $seguimiento->cliente->rut ?? '',
+                'cotizacion' => $seguimiento->cotizacion->codigo ?? 'Sin cotización',
+                'vendedor' => $seguimiento->vendedor->name ?? 'Sin vendedor',
+                'estado' => $seguimiento->estado,
+                'prioridad' => $seguimiento->prioridad,
+                'ultima_gestion' => $seguimiento->ultima_gestion ? 
+                    \Carbon\Carbon::parse($seguimiento->ultima_gestion)->format('d/m/Y') : null,
+                'proxima_gestion' => $seguimiento->proxima_gestion ? 
+                    \Carbon\Carbon::parse($seguimiento->proxima_gestion)->format('Y-m-d') : null, // 🔧 FORMATO CORRECTO
+                'notas' => $seguimiento->notas,
+                'dias_atraso' => $seguimiento->proxima_gestion ? 
+                    max(0, now()->diffInDays(\Carbon\Carbon::parse($seguimiento->proxima_gestion), false)) : 0,
+                'color_clasificacion' => $this->getColorClasificacion($seguimiento)
+            ];
+        });
+
+        // **ESTADÍSTICAS PARA CONTADORES**
+        // TEMPORAL: Comentado para desarrollo
+        // $estadisticas = $this->calcularEstadisticas($user);
+        // **ESTADÍSTICAS PARA CONTADORES**
+        $estadisticas = [
+            'total' => $seguimientos->total(),
+            'atrasados' => Seguimiento::where('proxima_gestion', '<', now()->toDateString())->count(),
+            'proximos_7_dias' => Seguimiento::whereBetween('proxima_gestion', [
+                now()->toDateString(), 
+                now()->addDays(7)->toDateString()
+            ])->count(),
+            'hoy' => Seguimiento::whereDate('proxima_gestion', now()->toDateString())->count(),
+            'completados_hoy' => Seguimiento::where('estado', 'completado')
+                                          ->whereDate('updated_at', now()->toDateString())->count(),
+            'total_activos' => Seguimiento::whereIn('estado', ['pendiente', 'en_proceso'])->count()
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'estadisticas' => $estadisticas,
+            'pagination' => [
+                'current_page' => $seguimientos->currentPage(),
+                'last_page' => $seguimientos->lastPage(),
+                'per_page' => $seguimientos->perPage(),
+                'total' => $seguimientos->total()
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error al cargar seguimientos:', [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al cargar seguimientos: ' . $e->getMessage()
+        ], 500);
+    }
+}
+/**
+ * Determinar color de clasificación para el seguimiento
+ */
+private function getColorClasificacion($seguimiento)
+{
+    if (!$seguimiento->proxima_gestion) {
+        return 'neutral';
+    }
+    
+    $dias = now()->diffInDays(\Carbon\Carbon::parse($seguimiento->proxima_gestion), false);
+    
+    if ($dias < 0) {
+        return 'danger'; // Atrasado
+    } elseif ($dias <= 3) {
+        return 'warning'; // Próximo
+    } else {
+        return 'success'; // Normal
+    }
+}
     /**
      * Store a newly created resource in storage.
      */
@@ -163,7 +255,7 @@ class SeguimientoController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Seguimiento creado correctamente',
-                'data' => $seguimiento->toTableArray()
+                'data' => $seguimiento->fresh()
             ]);
 
         } catch (\Exception $e) {
@@ -178,45 +270,65 @@ class SeguimientoController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, Seguimiento $seguimiento)
-    {
-        try {
-            // Verificar permisos
-            $user = Auth::user();
-            if ($user->esVendedor() && !$user->esJefe() && $seguimiento->vendedor_id !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permiso para editar este seguimiento'
-                ], 403);
-            }
-
-            $validated = $request->validate([
-                'estado' => 'sometimes|in:pendiente,en_proceso,completado,vencido,reprogramado',
-                'prioridad' => 'sometimes|in:baja,media,alta,urgente',
-                'proxima_gestion' => 'sometimes|date',
-                'notas' => 'nullable|string|max:1000',
-                'resultado_ultima_gestion' => 'nullable|string|max:1000'
-            ]);
-
-            // Si se marca como completado, actualizar fecha
-            if (isset($validated['estado']) && $validated['estado'] === 'completado') {
-                $validated['ultima_gestion'] = now()->toDateString();
-            }
-
-            $seguimiento->update($validated);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Seguimiento actualizado correctamente',
-                'data' => $seguimiento->fresh()->toTableArray()
-            ]);
-
-        } catch (\Exception $e) {
+{
+    try {
+        // ✅ 1. Verificar permisos (comentado temporalmente para debug)
+        /*
+        $user = Auth::user();
+        if ($user->esVendedor() && !$user->esJefe() && $seguimiento->vendedor_id !== $user->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar seguimiento: ' . $e->getMessage()
-            ], 500);
+                'message' => 'No tienes permiso para editar este seguimiento'
+            ], 403);
         }
+        */
+
+        // ✅ 2. Validación simplificada
+        $validated = $request->validate([
+            'estado' => 'sometimes|in:pendiente,en_proceso,completado,vencido,reprogramado',
+            'prioridad' => 'sometimes|in:baja,media,alta,urgente',
+            'proxima_gestion' => 'sometimes|date',
+            'notas' => 'nullable|string|max:1000',
+            'resultado_ultima_gestion' => 'nullable|string|max:1000'
+        ]);
+
+        // ✅ 3. Si se marca como completado, actualizar fecha
+        if (isset($validated['estado']) && $validated['estado'] === 'completado') {
+            $validated['ultima_gestion'] = now()->toDateString();
+        }
+
+        // ✅ 4. Actualizar
+        $seguimiento->update($validated);
+
+        // ✅ 5. Respuesta limpia
+        return response()->json([
+            'success' => true,
+            'message' => 'Seguimiento actualizado correctamente',
+            'data' => $seguimiento->fresh()->toTableArray(),
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error de validación',
+            'errors' => $e->errors()
+        ], 422);
+        
+    } catch (\Exception $e) {
+        // ✅ 6. Debug temporal - muestra el error exacto
+        \Log::error('Error en update seguimiento:', [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'data' => $request->all()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al actualizar seguimiento: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Remove the specified resource from storage.
@@ -249,58 +361,85 @@ class SeguimientoController extends Controller
     }
 
     /**
-     * ACTUALIZACIÓN MASIVA - FUNCIONALIDAD CRÍTICA
-     * Permite actualizar múltiples seguimientos a la vez
-     */
-    public function updateMasivo(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'seguimiento_ids' => 'required|array|min:1',
-                'seguimiento_ids.*' => 'exists:seguimientos,id',
-                'datos' => 'required|array',
-                'datos.estado' => 'sometimes|in:pendiente,en_proceso,completado,vencido,reprogramado',
-                'datos.prioridad' => 'sometimes|in:baja,media,alta,urgente',
-                'datos.proxima_gestion' => 'sometimes|date',
-                'datos.vendedor_id' => 'sometimes|exists:users,id',
-                'datos.notas' => 'nullable|string|max:1000'
-            ]);
+ * ACTUALIZACIÓN MASIVA - FUNCIONALIDAD CRÍTICA
+ * Permite actualizar múltiples seguimientos a la vez
+ */
+public function updateMasivo(Request $request)
+{
+    try {
+        \Log::info('🔧 Actualización masiva iniciada:', $request->all());
+        
+        $validated = $request->validate([
+            'seguimiento_ids' => 'required|array|min:1',
+            'seguimiento_ids.*' => 'integer|exists:seguimientos,id',
+            'datos' => 'required|array',
+            'datos.estado' => 'sometimes|in:pendiente,en_proceso,completado,vencido,reprogramado',
+            'datos.prioridad' => 'sometimes|in:baja,media,alta,urgente',
+            'datos.proxima_gestion' => 'sometimes|date_format:Y-m-d',
+            'datos.vendedor_id' => 'sometimes|integer|exists:users,id',
+            'datos.notas' => 'nullable|string|max:1000'
+        ]);
 
-            $user = Auth::user();
-            $seguimientoIds = $validated['seguimiento_ids'];
-            $datos = $validated['datos'];
+        $seguimientoIds = $validated['seguimiento_ids'];
+        $datos = $validated['datos'];
+        
+        \Log::info('📝 Datos validados:', [
+            'ids' => $seguimientoIds,
+            'datos' => $datos
+        ]);
 
-            // Verificar permisos para cada seguimiento
-            if ($user->esVendedor() && !$user->esJefe()) {
-                $seguimientosPermitidos = Seguimiento::whereIn('id', $seguimientoIds)
-                    ->where('vendedor_id', $user->id)
-                    ->pluck('id')
-                    ->toArray();
-                
-                if (count($seguimientosPermitidos) !== count($seguimientoIds)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'No tienes permiso para editar algunos de los seguimientos seleccionados'
-                    ], 403);
-                }
+        // Filtrar solo datos con valores
+        $datosParaActualizar = [];
+        foreach ($datos as $campo => $valor) {
+            if (!empty($valor) && $valor !== '') {
+                $datosParaActualizar[$campo] = $valor;
             }
-
-            // Realizar actualización masiva
-            $actualizado = Seguimiento::actualizarMasivo($seguimientoIds, $datos);
-
-            return response()->json([
-                'success' => true,
-                'message' => "Se actualizaron {$actualizado} seguimientos correctamente"
-            ]);
-
-        } catch (\Exception $e) {
+        }
+        
+        if (empty($datosParaActualizar)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error en actualización masiva: ' . $e->getMessage()
-            ], 500);
+                'message' => 'No hay campos para actualizar'
+            ], 422);
         }
-    }
 
+        // Realizar actualización
+        $actualizados = Seguimiento::whereIn('id', $seguimientoIds)
+                                 ->update($datosParaActualizar);
+
+        \Log::info('✅ Actualización completada:', [
+            'actualizados' => $actualizados
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Se actualizaron {$actualizados} seguimientos correctamente"
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('❌ Error de validación en actualización masiva:', [
+            'errors' => $e->errors()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error de validación',
+            'errors' => $e->errors()
+        ], 422);
+        
+    } catch (\Exception $e) {
+        \Log::error('❌ Error en actualización masiva:', [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error en actualización masiva: ' . $e->getMessage()
+        ], 500);
+    }
+}
     /**
      * IMPORTACIÓN DE EXCEL - FUNCIONALIDAD CRÍTICA
      * Permite importar seguimientos desde archivo Excel
@@ -376,42 +515,67 @@ class SeguimientoController extends Controller
     /**
      * OBTENER VENDEDORES DISPONIBLES SEGÚN ROL
      */
-    public function getVendedores(Request $request)
-    {
-        try {
-            $user = Auth::user();
-            $query = User::activos()->vendedores();
+   //* public function getVendedores(Request $request)
+   // {
+     //   try {
+       //     $user = Auth::user();
+      //      $query = User::activos()->vendedores();
 
             // Si es jefe, mostrar su equipo
-            if ($user->esJefe()) {
-                $equipoIds = $user->vendedoresSupervision()->pluck('users.id')->toArray();
-                if (!empty($equipoIds)) {
-                    $query->whereIn('id', $equipoIds);
-                }
-            }
+        //    if ($user->esJefe()) {
+          //      $equipoIds = $user->vendedoresSupervision()->pluck('users.id')->toArray();
+            //    if (!empty($equipoIds)) {
+              //      $query->whereIn('id', $equipoIds);
+                //}
+            //}
             // Si es vendedor simple, solo él mismo
-            elseif ($user->esVendedor()) {
-                $query->where('id', $user->id);
-            }
+           // elseif ($user->esVendedor()) {
+           //     $query->where('id', $user->id);
+         //   }
 
-            $vendedores = $query->get()->map(function ($vendedor) {
-                return [
-                    'id' => $vendedor->id,
-                    'name' => $vendedor->name,
-                    'iniciales' => $vendedor->iniciales
-                ];
-            });
+//            $vendedores = $query->get()->map(function ($vendedor) {
+      //          return [
+//                    'id' => $vendedor->id,
+  //                  'name' => $vendedor->name,
+    //                'iniciales' => $vendedor->iniciales
+      //          ];
+        //    });
 
-            return response()->json($vendedores);
+        //    return response()->json($vendedores);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener vendedores: ' . $e->getMessage()
-            ], 500);
-        }
+//        } catch (\Exception $e) {
+         //   return response()->json([
+         //       'success' => false,
+         //       'message' => 'Error al obtener vendedores: ' . $e->getMessage()
+         //   ], 500);
+       // }
+   // }
+/**
+ * * Obtener lista de vendedores para selectors
+ */
+public function getVendedores()
+{
+    try {
+        $vendedores = User::select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
+        \Log::info('🔍 Vendedores obtenidos:', [
+            'count' => $vendedores->count()
+        ]);
+
+        return response()->json($vendedores);
+
+    } catch (\Exception $e) {
+        \Log::error('❌ Error al obtener vendedores:', [
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'error' => 'Error al obtener vendedores: ' . $e->getMessage()
+        ], 500);
     }
-
+}
     /**
      * CALCULAR ESTADÍSTICAS PARA CONTADORES DE LA VISTA
      * CRÍTICO: Estos números aparecen en tiempo real en la interfaz

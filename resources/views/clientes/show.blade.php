@@ -539,7 +539,7 @@ function mostrarTab(nombreTab) {
 // Funciones de carga de datos
 async function cargarContactosAdicionales() {
     try {
-        const response = await fetch(`/api/contactos/cliente/${clienteId}`);
+        const response = await fetch(`/crm-bioscom/public/api/contactos/cliente/${clienteId}`);
         const data = await response.json();
         
         const contenedor = document.getElementById('lista-contactos-adicionales');
@@ -593,7 +593,7 @@ async function cargarCotizaciones() {
     const contenedor = document.getElementById('lista-cotizaciones');
     
     try {
-        const response = await fetch(`/api/cotizaciones?cliente=${clienteId}`);
+        const response = await fetch(`/crm-bioscom/public/api/cotizaciones?cliente=${clienteId}`);
         const data = await response.json();
         
         if (data.success && data.data.length > 0) {
@@ -662,7 +662,7 @@ async function cargarSeguimientos() {
     const contenedor = document.getElementById('lista-seguimientos');
     
     try {
-        const response = await fetch(`/api/seguimiento/data?cliente=${clienteId}`);
+        const response = await fetch(`/crm-bioscom/public/api/seguimiento/data?cliente=${clienteId}`);
         const data = await response.json();
         
         if (data.success && data.data.length > 0) {
@@ -859,7 +859,7 @@ function editarSeguimiento(seguimientoId) {
 
 async function completarSeguimiento(seguimientoId) {
     try {
-        const response = await fetch(`/api/seguimiento/${seguimientoId}`, {
+        const response = await fetch(`/crm-bioscom/public/api/seguimiento/${seguimientoId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
