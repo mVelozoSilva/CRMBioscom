@@ -1,948 +1,1055 @@
 @extends('layouts.app')
 
-@section('title', 'Mi Día - Agenda CRM Bioscom')
+@section('title', 'Mi Día - Agenda')
 
 @section('content')
 <div class="min-h-screen bg-gray-50 py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <!-- Header con Control de Fecha -->
-        <div class="sm:flex sm:items-center sm:justify-between mb-8">
-            <div class="flex-1 min-w-0">
-                <h1 class="text-3xl font-bold text-gray-900 flex items-center">
-                    <i class="fas fa-calendar-day text-blue-600 mr-3"></i>
-                    Mi Día
-                    <span class="ml-3 text-lg font-normal text-gray-500">
-                        {{ $fechaCarbon->format('l, d/m/Y') }}
-                    </span>
-                </h1>
-                <p class="mt-1 text-sm text-gray-600">
-                    Gestiona tu agenda y tareas del día de manera eficiente
-                </p>
-            </div>
-            <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">
-                <!-- Control de Fecha -->
-                <div class="flex items-center space-x-2">
-                    <a href="{{ request()->fullUrlWithQuery(['fecha' => $fechaCarbon->copy()->subDay()->format('Y-m-d')]) }}" 
-                       class="p-2 border border-gray-300 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-50">
-                        <i class="fas fa-chevron-left"></i>
-                    </a>
-                    <input type="date" 
-                           id="fecha-selector"
-                           value="{{ $fechaCarbon->format('Y-m-d') }}"
-                           class="border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    <a href="{{ request()->fullUrlWithQuery(['fecha' => $fechaCarbon->copy()->addDay()->format('Y-m-d')]) }}" 
-                       class="p-2 border border-gray-300 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-50">
-                        <i class="fas fa-chevron-right"></i>
-                    </a>
+        <!-- Header Section -->
+        <div class="mb-8">
+            <div class="md:flex md:items-center md:justify-between">
+                <div class="flex-1 min-w-0">
+                    <h1 class="text-3xl font-bold text-gray-900 leading-tight">
+                        <i class="fas fa-calendar-day text-blue-600 mr-3"></i>
+                        Mi Día
+                    </h1>
+                    <p class="mt-2 text-gray-600">
+                        Gestiona tus tareas del día {{ \Carbon\Carbon::now()->format('d/m/Y') }}
+                    </p>
                 </div>
-                
-                <button onclick="abrirModalNuevaTarea()" 
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <i class="fas fa-plus mr-2"></i>
-                    Nueva Tarea
-                </button>
-                
-                <a href="{{ route('agenda.mi-semana') }}" 
-                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <i class="fas fa-calendar-week mr-2"></i>
-                    Vista Semanal
-                </a>
+                <div class="mt-4 md:mt-0 md:ml-4">
+                    <div class="flex items-center space-x-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            <i class="fas fa-clock mr-1"></i>
+                            {{ \Carbon\Carbon::now('America/Santiago')->format('H:i') }}
+                        </span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            <i class="fas fa-calendar mr-1"></i>
+                            {{ \Carbon\Carbon::now('America/Santiago')->locale('es')->translatedFormat('l') }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+       <!-- 🚨 BOTÓN DE EMERGENCIA - DISTRIBUCIÓN AUTOMÁTICA -->
+        <div class="mb-6">
+            <div class="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border-2 border-orange-200 p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-magic text-2xl text-orange-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">¿Seguimientos Acumulados?</h3>
+                            <p class="text-sm text-gray-600">Organiza automáticamente todos los vencidos en tu agenda</p>
+                        </div>
+                    </div>
+                    <button onclick="abrirDistribucionAutomatica()" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-bold text-sm hover:from-orange-600 hover:to-red-600 focus:outline-none focus:ring-4 focus:ring-orange-300 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                        <i class="fas fa-magic mr-2"></i>
+                        DISTRIBUIR AUTOMÁTICAMENTE
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Alertas y Notificaciones -->
-        @if(!empty($alertas))
-            <div class="mb-6 space-y-3">
-                @foreach($alertas as $alerta)
-                    <div class="rounded-md p-4 
-                        {{ $alerta['tipo'] === 'error' ? 'bg-red-50 border border-red-200' : '' }}
-                        {{ $alerta['tipo'] === 'warning' ? 'bg-yellow-50 border border-yellow-200' : '' }}
-                        {{ $alerta['tipo'] === 'info' ? 'bg-blue-50 border border-blue-200' : '' }}">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-exclamation-triangle 
-                                    {{ $alerta['tipo'] === 'error' ? 'text-red-400' : '' }}
-                                    {{ $alerta['tipo'] === 'warning' ? 'text-yellow-400' : '' }}
-                                    {{ $alerta['tipo'] === 'info' ? 'text-blue-400' : '' }}"></i>
-                            </div>
-                            <div class="ml-3 flex-1">
-                                <h3 class="text-sm font-medium 
-                                    {{ $alerta['tipo'] === 'error' ? 'text-red-800' : '' }}
-                                    {{ $alerta['tipo'] === 'warning' ? 'text-yellow-800' : '' }}
-                                    {{ $alerta['tipo'] === 'info' ? 'text-blue-800' : '' }}">
-                                    {{ $alerta['titulo'] }}
-                                </h3>
-                                <div class="mt-2 text-sm 
-                                    {{ $alerta['tipo'] === 'error' ? 'text-red-700' : '' }}
-                                    {{ $alerta['tipo'] === 'warning' ? 'text-yellow-700' : '' }}
-                                    {{ $alerta['tipo'] === 'info' ? 'text-blue-700' : '' }}">
-                                    <p>{{ $alerta['mensaje'] }}</p>
-                                </div>
-                                @if($alerta['accion'] === 'distribuir_seguimientos')
-                                    <div class="mt-3">
-                                        <button onclick="abrirModalDistribucion()" 
-                                                class="text-sm bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700">
-                                            Distribuir Automáticamente
-                                        </button>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        @endif
-
-        <!-- Estadísticas Rápidas -->
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
+        <!-- Quick Stats Section con Análisis Inteligente -->
+        <div class="mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Pendientes Hoy -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                <i class="fas fa-tasks text-white text-sm"></i>
+                            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-tasks text-yellow-600"></i>
                             </div>
                         </div>
                         <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500 truncate">Total Tareas</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ $estadisticas['total_tareas'] }}</p>
+                            <h3 class="text-sm font-medium text-gray-500">Pendientes Hoy</h3>
+                            <p class="text-2xl font-semibold text-gray-900" id="stat-pendientes">-</p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
+                <!-- En Progreso -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                <i class="fas fa-check-circle text-white text-sm"></i>
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-play-circle text-blue-600"></i>
                             </div>
                         </div>
                         <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500 truncate">Completadas</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ $estadisticas['completadas'] }}</p>
+                            <h3 class="text-sm font-medium text-gray-500">En Progreso</h3>
+                            <p class="text-2xl font-semibold text-gray-900" id="stat-progreso">-</p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
+                <!-- Completadas -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                                <i class="fas fa-clock text-white text-sm"></i>
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-600"></i>
                             </div>
                         </div>
                         <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500 truncate">Tiempo Total</p>
-                            <p class="text-2xl font-semibold text-gray-900">
-                                {{ intval($estadisticas['tiempo_estimado_total'] / 60) }}h 
-                                {{ $estadisticas['tiempo_estimado_total'] % 60 }}m
-                            </p>
+                            <h3 class="text-sm font-medium text-gray-500">Completadas</h3>
+                            <p class="text-2xl font-semibold text-gray-900" id="stat-completadas">-</p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
+                <!-- Vencidas -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                                <i class="fas fa-exclamation-triangle text-white text-sm"></i>
+                            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-600"></i>
                             </div>
                         </div>
                         <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500 truncate">Seguimientos Vencidos</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ $estadisticas['seguimientos_vencidos'] }}</p>
+                            <h3 class="text-sm font-medium text-gray-500">Vencidas</h3>
+                            <p class="text-2xl font-semibold text-gray-900" id="stat-vencidas">-</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Lista de Tareas Principal -->
-            <div class="lg:col-span-2">
-                <div class="bg-white shadow rounded-lg">
-                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                        <h3 class="text-lg font-medium text-gray-900">
-                            Tareas del Día
-                            @if($fechaCarbon->isToday())
-                                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    Hoy
-                                </span>
-                            @elseif($fechaCarbon->isTomorrow())
-                                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    Mañana
-                                </span>
-                            @elseif($fechaCarbon->isPast())
-                                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    Pasado
-                                </span>
-                            @endif
-                        </h3>
-                        <div class="flex space-x-2">
-                            <select id="filtro-estado" class="text-sm border-gray-300 rounded-md">
-                                <option value="">Todos los estados</option>
-                                <option value="pendiente">Pendientes</option>
-                                <option value="en_progreso">En Progreso</option>
-                                <option value="completada">Completadas</option>
-                            </select>
-                            <select id="filtro-tipo" class="text-sm border-gray-300 rounded-md">
-                                <option value="">Todos los tipos</option>
-                                <option value="seguimiento">Seguimiento</option>
-                                <option value="cotizacion">Cotización</option>
-                                <option value="reunion">Reunión</option>
-                                <option value="llamada">Llamada</option>
-                            </select>
+        <!-- 🧠 WIDGET DE ANÁLISIS INTELIGENTE -->
+        <div id="widgetAnalisisInteligente" class="mb-8 hidden">
+            <!-- Estado Normal/Bueno -->
+            <div id="estadoNormal" class="hidden">
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-smile text-green-600 text-lg"></i>
                         </div>
-                    </div>
-
-                    <div class="divide-y divide-gray-200" id="lista-tareas">
-                        @forelse($tareas as $tarea)
-                            <div class="p-6 hover:bg-gray-50 transition-colors tarea-item" 
-                                 data-estado="{{ $tarea->estado }}" 
-                                 data-tipo="{{ $tarea->tipo }}"
-                                 data-tarea-id="{{ $tarea->id }}">
-                                <div class="flex items-start space-x-4">
-                                    <!-- Checkbox de Estado -->
-                                    <div class="flex-shrink-0 pt-1">
-                                        <input type="checkbox" 
-                                               {{ $tarea->estado === 'completada' ? 'checked' : '' }}
-                                               onchange="cambiarEstadoTarea({{ $tarea->id }}, this.checked)"
-                                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                                    </div>
-
-                                    <!-- Contenido Principal -->
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center justify-between">
-                                            <h4 class="text-lg font-medium text-gray-900 {{ $tarea->estado === 'completada' ? 'line-through text-gray-500' : '' }}">
-                                                {{ $tarea->titulo }}
-                                            </h4>
-                                            <div class="flex items-center space-x-2">
-                                                <!-- Prioridad -->
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                                    {{ $tarea->color_prioridad === 'red' ? 'bg-red-100 text-red-800' : '' }}
-                                                    {{ $tarea->color_prioridad === 'orange' ? 'bg-orange-100 text-orange-800' : '' }}
-                                                    {{ $tarea->color_prioridad === 'yellow' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                                    {{ $tarea->color_prioridad === 'green' ? 'bg-green-100 text-green-800' : '' }}">
-                                                    {{ $tarea->prioridad_humana }}
-                                                </span>
-                                                
-                                                <!-- Estado -->
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                                    {{ $tarea->color_estado === 'yellow' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                                    {{ $tarea->color_estado === 'blue' ? 'bg-blue-100 text-blue-800' : '' }}
-                                                    {{ $tarea->color_estado === 'green' ? 'bg-green-100 text-green-800' : '' }}
-                                                    {{ $tarea->color_estado === 'red' ? 'bg-red-100 text-red-800' : '' }}
-                                                    {{ $tarea->color_estado === 'gray' ? 'bg-gray-100 text-gray-800' : '' }}">
-                                                    {{ $tarea->estado_humano }}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Información Adicional -->
-                                        <div class="mt-2 flex items-center text-sm text-gray-500 space-x-4">
-                                            <!-- Hora -->
-                                            @if($tarea->hora_inicio)
-                                                <div class="flex items-center">
-                                                    <i class="fas fa-clock mr-1"></i>
-                                                    {{ Carbon::parse($tarea->hora_inicio)->format('H:i') }}
-                                                    @if($tarea->hora_fin)
-                                                        - {{ Carbon::parse($tarea->hora_fin)->format('H:i') }}
-                                                    @endif
-                                                </div>
-                                            @endif
-
-                                            <!-- Duración -->
-                                            @if($tarea->duracion_estimada)
-                                                <div class="flex items-center">
-                                                    <i class="fas fa-stopwatch mr-1"></i>
-                                                    {{ $tarea->duracion_formateada }}
-                                                </div>
-                                            @endif
-
-                                            <!-- Tipo -->
-                                            <div class="flex items-center">
-                                                <i class="fas fa-tag mr-1"></i>
-                                                {{ $tarea->tipo_humano }}
-                                            </div>
-
-                                            <!-- Cliente -->
-                                            @if($tarea->cliente)
-                                                <div class="flex items-center">
-                                                    <i class="fas fa-building mr-1"></i>
-                                                    {{ Str::limit($tarea->cliente->nombre_institucion, 30) }}
-                                                </div>
-                                            @endif
-                                        </div>
-
-                                        <!-- Descripción -->
-                                        @if($tarea->descripcion)
-                                            <p class="mt-2 text-sm text-gray-600">{{ Str::limit($tarea->descripcion, 150) }}</p>
-                                        @endif
-
-                                        <!-- Resultado si está completada -->
-                                        @if($tarea->estado === 'completada' && $tarea->resultado)
-                                            <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                                                <p class="text-sm text-green-800">
-                                                    <strong>Resultado:</strong> {{ $tarea->resultado }}
-                                                </p>
-                                            </div>
-                                        @endif
-                                    </div>
-
-                                    <!-- Acciones -->
-                                    <div class="flex-shrink-0">
-                                        <div class="flex items-center space-x-2">
-                                            @if($tarea->estado !== 'completada')
-                                                <button onclick="iniciarTarea({{ $tarea->id }})" 
-                                                        class="text-blue-600 hover:text-blue-800"
-                                                        title="Iniciar tarea">
-                                                    <i class="fas fa-play"></i>
-                                                </button>
-                                                <button onclick="posponerTarea({{ $tarea->id }})" 
-                                                        class="text-yellow-600 hover:text-yellow-800"
-                                                        title="Posponer">
-                                                    <i class="fas fa-calendar-plus"></i>
-                                                </button>
-                                            @endif
-                                            <button onclick="editarTarea({{ $tarea->id }})" 
-                                                    class="text-indigo-600 hover:text-indigo-800"
-                                                    title="Editar">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            @if($tarea->puedeSerEliminada())
-                                                <button onclick="eliminarTarea({{ $tarea->id }})" 
-                                                        class="text-red-600 hover:text-red-800"
-                                                        title="Eliminar">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="p-12 text-center">
-                                <i class="fas fa-calendar-check text-4xl text-gray-400 mb-4"></i>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">No hay tareas programadas</h3>
-                                <p class="text-gray-500 mb-4">
-                                    @if($fechaCarbon->isToday())
-                                        ¡Perfecto! No tienes tareas pendientes para hoy.
-                                    @else
-                                        No hay tareas programadas para {{ $fechaCarbon->format('d/m/Y') }}.
-                                    @endif
-                                </p>
-                                <button onclick="abrirModalNuevaTarea()" 
-                                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                                    <i class="fas fa-plus mr-2"></i>
-                                    Agregar Tarea
-                                </button>
-                            </div>
-                        @endforelse
+                        <div class="flex-1">
+                            <h3 class="text-sm font-semibold text-green-900">¡Agenda Balanceada!</h3>
+                            <p class="text-xs text-green-700" id="mensajeNormal">Tu carga de trabajo está bien distribuida esta semana.</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Panel Lateral -->
-            <div class="lg:col-span-1 space-y-6">
-                
-                <!-- Seguimientos Vencidos -->
-                @if($seguimientosVencidos->count() > 0)
-                    <div class="bg-white shadow rounded-lg">
-                        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                            <h3 class="text-lg font-medium text-gray-900">Seguimientos Vencidos</h3>
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                {{ $seguimientosVencidos->count() }}
-                            </span>
+            <!-- Alerta de Sobrecarga -->
+            <div id="alertaSobrecarga" class="hidden">
+                <div class="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border-2 border-orange-300 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-exclamation-triangle text-orange-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-orange-900">¡Alerta de Sobrecarga!</h3>
+                                <p class="text-xs text-orange-700" id="mensajeSobrecarga">Detectamos días muy cargados en tu agenda.</p>
+                            </div>
                         </div>
-                        <div class="divide-y divide-gray-200">
-                            @foreach($seguimientosVencidos as $seguimiento)
-                                <div class="p-4">
-                                    <h4 class="text-sm font-medium text-gray-900">
-                                        {{ $seguimiento->cliente->nombre_institucion }}
-                                    </h4>
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        Vencido: {{ $seguimiento->proxima_gestion->diffForHumans() }}
-                                    </p>
-                                    @if($seguimiento->cotizacion)
-                                        <p class="text-xs text-blue-600 mt-1">
-                                            {{ $seguimiento->cotizacion->nombre_cotizacion }}
-                                        </p>
-                                    @endif
-                                    <button onclick="convertirSeguimientoATarea({{ $seguimiento->id }})"
-                                            class="mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">
-                                        Crear Tarea
-                                    </button>
-                                </div>
-                            @endforeach
-                        </div>
-                        <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
-                            <button onclick="abrirModalDistribucion()" 
-                                    class="w-full text-sm text-blue-600 hover:text-blue-800">
-                                Distribuir Todos Automáticamente
-                            </button>
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Próximas Tareas -->
-                @if($proximasTareas->count() > 0)
-                    <div class="bg-white shadow rounded-lg">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">Próximas Tareas</h3>
-                            <p class="text-sm text-gray-500">Siguiente día laboral</p>
-                        </div>
-                        <div class="divide-y divide-gray-200">
-                            @foreach($proximasTareas as $tarea)
-                                <div class="p-4">
-                                    <h4 class="text-sm font-medium text-gray-900">{{ $tarea->titulo }}</h4>
-                                    <div class="mt-1 flex items-center text-xs text-gray-500 space-x-2">
-                                        @if($tarea->hora_inicio)
-                                            <span>{{ Carbon::parse($tarea->hora_inicio)->format('H:i') }}</span>
-                                        @endif
-                                        <span>{{ $tarea->tipo_humano }}</span>
-                                        @if($tarea->cliente)
-                                            <span>{{ Str::limit($tarea->cliente->nombre_institucion, 20) }}</span>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Carga de Trabajo Semanal -->
-                <div class="bg-white shadow rounded-lg">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h3 class="text-lg font-medium text-gray-900">Carga de Trabajo Semanal</h3>
-                    </div>
-                    <div class="p-6">
-                        @php
-                            $diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-                            $inicioSemana = $fechaCarbon->copy()->startOfWeek();
-                        @endphp
-                        
-                        <div class="space-y-3">
-                            @for($i = 0; $i < 7; $i++)
-                                @php
-                                    $fecha = $inicioSemana->copy()->addDays($i);
-                                    $fechaStr = $fecha->format('Y-m-d');
-                                    $datosDia = $cargaSemana->get($fechaStr);
-                                    $tiempoTotal = $datosDia ? $datosDia->tiempo_total : 0;
-                                    $totalTareas = $datosDia ? $datosDia->total_tareas : 0;
-                                    $porcentajeCarga = min(100, ($tiempoTotal / 480) * 100); // 480min = 8h
-                                @endphp
-                                
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="text-sm font-medium text-gray-700 w-8">{{ $diasSemana[$i] }}</span>
-                                        <span class="text-xs text-gray-500">{{ $fecha->format('d/m') }}</span>
-                                        @if($fecha->isToday())
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                Hoy
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-16 bg-gray-200 rounded-full h-2">
-                                            <div class="bg-blue-600 h-2 rounded-full" 
-                                                 style="width: {{ $porcentajeCarga }}%"></div>
-                                        </div>
-                                        <span class="text-xs text-gray-500 w-8">{{ $totalTareas }}</span>
-                                    </div>
-                                </div>
-                            @endfor
-                        </div>
+                        <button onclick="abrirSugerenciasInteligentes()" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-xs font-bold hover:from-orange-600 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-orange-300 shadow-md hover:shadow-lg transition-all">
+                            <i class="fas fa-magic mr-1"></i>
+                            VER SUGERENCIAS
+                        </button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Acciones Rápidas -->
-                <div class="bg-white shadow rounded-lg">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h3 class="text-lg font-medium text-gray-900">Acciones Rápidas</h3>
+            <!-- Alerta Moderada -->
+            <div id="alertaModerada" class="hidden">
+                <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-300 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-clock text-yellow-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-yellow-900">Carga Alta Detectada</h3>
+                                <p class="text-xs text-yellow-700" id="mensajeModerado">Algunos días tienen bastantes tareas.</p>
+                            </div>
+                        </div>
+                        <button onclick="abrirSugerenciasInteligentes()" class="inline-flex items-center px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-medium hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-300 shadow-sm hover:shadow-md transition-all">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            Ver Tips
+                        </button>
                     </div>
-                    <div class="p-6 space-y-3">
-                        <button onclick="abrirModalNuevaTarea()" 
-                                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content: Lista de Tareas -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <!-- Component Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-medium text-gray-900">
+                        <i class="fas fa-list mr-2 text-blue-600"></i>
+                        Mis Tareas del Día
+                    </h2>
+                    <div class="flex space-x-3">
+                        <button onclick="abrirModalNuevaTarea()" type="button" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                             <i class="fas fa-plus mr-2"></i>
                             Nueva Tarea
                         </button>
-                        
-                        <button onclick="marcarTodasCompletadas()" 
-                                class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            <i class="fas fa-check-double mr-2"></i>
-                            Completar Todas
-                        </button>
-                        
-                        <a href="{{ route('seguimiento.index') }}" 
-                           class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            <i class="fas fa-tasks mr-2"></i>
-                            Ver Seguimientos
-                        </a>
-                        
-                        <button onclick="exportarDia()" 
-                                class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            <i class="fas fa-download mr-2"></i>
-                            Exportar Día
+                        <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            Actualizar
                         </button>
                     </div>
                 </div>
             </div>
+
+            <!-- Vue Component Mount Point -->
+            <div id="tarea-day-list-container">
+                <tarea-day-list></tarea-day-list>
+            </div>
         </div>
-    </div>
-</div>
+       <!-- Modal de Nueva Tarea -->
+        <tarea-form 
+            :visible="false" 
+            ref="tareaForm"
+        ></tarea-form>
+        <!-- Modal de Distribución Automática -->
+    <div id="modalDistribucion" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+        <div class="relative top-20 mx-auto p-5 border w-[500px] shadow-xl rounded-lg bg-white">
+            <!-- Header del Modal -->
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900">
+                    <i class="fas fa-magic text-orange-500 mr-2"></i>
+                    Distribución Automática
+                </h3>
+                <button onclick="cerrarDistribucionAutomatica()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
 
-<!-- Modal de Nueva Tarea -->
-<div id="modal-nueva-tarea" class="fixed inset-0 z-50 hidden overflow-y-auto">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="cerrarModalNuevaTarea()"></div>
-
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <form id="form-nueva-tarea">
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                                Nueva Tarea
-                            </h3>
-                            
-                            <div class="space-y-4">
-                                <!-- Título -->
-                                <div>
-                                    <label for="tarea_titulo" class="block text-sm font-medium text-gray-700">
-                                        Título <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           id="tarea_titulo" 
-                                           name="titulo" 
-                                           required
-                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                </div>
-
-                                <!-- Fecha y Hora -->
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="tarea_fecha" class="block text-sm font-medium text-gray-700">
-                                            Fecha <span class="text-red-500">*</span>
-                                        </label>
-                                        <input type="date" 
-                                               id="tarea_fecha" 
-                                               name="fecha_tarea" 
-                                               value="{{ $fechaCarbon->format('Y-m-d') }}"
-                                               required
-                                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    </div>
-                                    <div>
-                                        <label for="tarea_hora" class="block text-sm font-medium text-gray-700">
-                                            Hora Inicio
-                                        </label>
-                                        <input type="time" 
-                                               id="tarea_hora" 
-                                               name="hora_inicio"
-                                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    </div>
-                                </div>
-
-                                <!-- Tipo y Prioridad -->
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="tarea_tipo" class="block text-sm font-medium text-gray-700">
-                                            Tipo <span class="text-red-500">*</span>
-                                        </label>
-                                        <select id="tarea_tipo" 
-                                                name="tipo" 
-                                                required
-                                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                            <option value="seguimiento">Seguimiento</option>
-                                            <option value="cotizacion">Cotización</option>
-                                            <option value="reunion">Reunión</option>
-                                            <option value="llamada">Llamada</option>
-                                            <option value="email">Email</option>
-                                            <option value="administrativa">Administrativa</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label for="tarea_prioridad" class="block text-sm font-medium text-gray-700">
-                                            Prioridad <span class="text-red-500">*</span>
-                                        </label>
-                                        <select id="tarea_prioridad" 
-                                                name="prioridad" 
-                                                required
-                                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                            <option value="baja">Baja</option>
-                                            <option value="media" selected>Media</option>
-                                            <option value="alta">Alta</option>
-                                            <option value="urgente">Urgente</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- Descripción -->
-                                <div>
-                                    <label for="tarea_descripcion" class="block text-sm font-medium text-gray-700">
-                                        Descripción
-                                    </label>
-                                    <textarea id="tarea_descripcion" 
-                                              name="descripcion" 
-                                              rows="3"
-                                              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Explicación Simple -->
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                    <div>
+                        <h4 class="font-semibold text-blue-900 mb-1">¿Qué hace esta función?</h4>
+                        <p class="text-sm text-blue-700">
+                            Toma todos los seguimientos vencidos y los distribuye automáticamente en tu agenda 
+                            durante los próximos días hábiles. <strong>¡Problema resuelto en 30 segundos!</strong>
+                        </p>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" 
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
-                        Crear Tarea
-                    </button>
-                    <button type="button" 
-                            onclick="cerrarModalNuevaTarea()"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+            </div>
+
+            <!-- Formulario Ultra-Simple -->
+            <form id="formDistribucion" onsubmit="ejecutarDistribucion(event)">
+                <div class="space-y-4">
+                    <!-- Tareas por día -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            <i class="fas fa-calendar-day text-green-500 mr-1"></i>
+                            ¿Cuántas tareas máximo por día?
+                        </label>
+                        <select id="tareasPorDia" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                            <option value="3">3 tareas por día (relajado)</option>
+                            <option value="5" selected>5 tareas por día (recomendado)</option>
+                            <option value="8">8 tareas por día (intensivo)</option>
+                            <option value="10">10 tareas por día (máximo)</option>
+                        </select>
+                    </div>
+
+                    <!-- Días a distribuir -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            <i class="fas fa-calendar-alt text-blue-500 mr-1"></i>
+                            ¿En cuántos días distribuir?
+                        </label>
+                        <select id="diasDistribuir" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                            <option value="5">5 días hábiles (1 semana)</option>
+                            <option value="10" selected>10 días hábiles (2 semanas)</option>
+                            <option value="15">15 días hábiles (3 semanas)</option>
+                            <option value="20">20 días hábiles (1 mes)</option>
+                        </select>
+                    </div>
+
+                    <!-- Previsualización -->
+                    <div class="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p class="text-sm text-green-700">
+                            <i class="fas fa-calculator text-green-500 mr-1"></i>
+                            <strong>Resultado:</strong> Se podrán distribuir hasta <span id="maxTareas" class="font-bold">50</span> seguimientos vencidos
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Botones del Modal -->
+                <div class="flex justify-end space-x-3 mt-8 pt-4 border-t border-gray-200">
+                    <button type="button" onclick="cerrarDistribucionAutomatica()" class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
                         Cancelar
+                    </button>
+                    <button type="submit" id="btnDistribuir" class="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-bold hover:from-orange-600 hover:to-red-600 focus:outline-none focus:ring-4 focus:ring-orange-300 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                        <i class="fas fa-magic mr-2"></i>
+                        <span id="textoBoton">DISTRIBUIR AHORA</span>
                     </button>
                 </div>
             </form>
+
+            <!-- Estado de Éxito -->
+            <div id="estadoExito" class="hidden">
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-check text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-green-900 mb-2">¡Distribución Completada!</h3>
+                    <p class="text-green-700 mb-4" id="mensajeExito">
+                        Se crearon 47 tareas distribuidas en 10 días hábiles
+                    </p>
+                    <button onclick="cerrarDistribucionAutomatica()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-thumbs-up mr-2"></i>
+                        ¡Perfecto!
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+        <!-- Fin del Modal de Distribución Automática -->
+        <!-- Modal de Sugerencias Inteligentes -->
+    <div id="modalSugerencias" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+        <div class="relative top-10 mx-auto p-5 border w-[700px] shadow-xl rounded-lg bg-white">
+            <!-- Header del Modal -->
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-gray-200">
+                <h3 class="text-xl font-bold text-gray-900">
+                    <i class="fas fa-brain text-purple-500 mr-2"></i>
+                    Análisis Inteligente de Tu Agenda
+                </h3>
+                <button onclick="cerrarSugerenciasInteligentes()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
 
-<!-- Modal de Distribución Automática -->
-<div id="modal-distribucion" class="fixed inset-0 z-50 hidden overflow-y-auto">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="cerrarModalDistribucion()"></div>
+            <!-- Loading State -->
+            <div id="loadingSugerencias" class="text-center py-12">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
+                    <i class="fas fa-brain text-2xl text-purple-600 animate-pulse"></i>
+                </div>
+                <p class="text-gray-600">Analizando tu carga de trabajo...</p>
+            </div>
 
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <form id="form-distribucion">
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                                Distribución Automática de Seguimientos
-                            </h3>
-                            
-                            <div class="space-y-4">
-                                <div>
-                                    <label for="max_tareas_dia" class="block text-sm font-medium text-gray-700">
-                                        Máximo de tareas por día
-                                    </label>
-                                    <input type="number" 
-                                           id="max_tareas_dia" 
-                                           name="max_tareas_por_dia" 
-                                           value="5"
-                                           min="1" 
-                                           max="20"
-                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                </div>
+            <!-- Contenido Principal -->
+            <div id="contenidoSugerencias" class="hidden">
+                <!-- Diagnóstico Semanal -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-3">
+                        <i class="fas fa-stethoscope text-blue-500 mr-2"></i>
+                        Diagnóstico de Tu Semana
+                    </h4>
+                    <div id="diagnosticoSemanal" class="grid grid-cols-7 gap-2">
+                        <!-- Los días se llenarán dinámicamente -->
+                    </div>
+                </div>
 
-                                <div>
-                                    <label for="dias_distribucion" class="block text-sm font-medium text-gray-700">
-                                        Distribuir en los próximos X días
-                                    </label>
-                                    <input type="number" 
-                                           id="dias_distribucion" 
-                                           name="dias_distribucion" 
-                                           value="10"
-                                           min="1" 
-                                           max="30"
-                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                </div>
+                <!-- Alertas Críticas -->
+                <div id="seccionAlertas" class="mb-6 hidden">
+                    <h4 class="text-lg font-semibold text-red-900 mb-3">
+                        <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                        Alertas Críticas
+                    </h4>
+                    <div id="listaAlertas" class="space-y-2">
+                        <!-- Las alertas se llenarán dinámicamente -->
+                    </div>
+                </div>
 
-                                <div>
-                                    <label for="priorizar_por" class="block text-sm font-medium text-gray-700">
-                                        Priorizar por
-                                    </label>
-                                    <select id="priorizar_por" 
-                                            name="priorizar_por"
-                                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                        <option value="fecha_vencimiento">Fecha de vencimiento</option>
-                                        <option value="valor_cotizacion">Valor de cotización</option>
-                                        <option value="tipo_cliente">Tipo de cliente</option>
-                                    </select>
-                                </div>
+                <!-- Sugerencias de Optimización -->
+                <div id="seccionSugerencias" class="mb-6 hidden">
+                    <h4 class="text-lg font-semibold text-green-900 mb-3">
+                        <i class="fas fa-lightbulb text-green-500 mr-2"></i>
+                        Sugerencias de Optimización
+                    </h4>
+                    <div id="listaSugerencias" class="space-y-4">
+                        <!-- Las sugerencias se llenarán dinámicamente -->
+                    </div>
+                </div>
 
-                                <div class="flex items-center">
-                                    <input type="checkbox" 
-                                           id="incluir_fin_semana" 
-                                           name="incluir_fin_semana"
-                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                                    <label for="incluir_fin_semana" class="ml-2 block text-sm text-gray-900">
-                                        Incluir fines de semana
-                                    </label>
-                                </div>
-                            </div>
+                <!-- Estado Saludable -->
+                <div id="estadoSaludable" class="hidden text-center py-8">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-smile text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-green-900 mb-2">¡Agenda Perfectamente Balanceada!</h3>
+                    <p class="text-green-700 mb-4">
+                        Tu carga de trabajo está muy bien distribuida. No necesitas optimizaciones.
+                    </p>
+                    <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                        <p class="text-sm text-green-700">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                            <strong>Consejo:</strong> Mantén este ritmo sostenible para evitar el burnout.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones del Modal -->
+            <div id="botonesSugerencias" class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 hidden">
+                <button onclick="cerrarSugerenciasInteligentes()" class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                    Cerrar
+                </button>
+                <button id="btnAplicarTodo" onclick="aplicarTodasLasSugerencias()" class="hidden px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg font-bold hover:from-green-600 hover:to-blue-600 focus:outline-none focus:ring-4 focus:ring-green-300 shadow-lg hover:shadow-xl transition-all">
+                    <i class="fas fa-magic mr-2"></i>
+                    APLICAR TODAS LAS OPTIMIZACIONES
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template para Día del Diagnóstico -->
+    <template id="templateDiaDiagnostico">
+        <div class="text-center p-2 rounded-lg border">
+            <div class="text-xs font-medium text-gray-600 mb-1"></div>
+            <div class="text-lg font-bold mb-1"></div>
+            <div class="text-xs"></div>
+        </div>
+    </template>
+
+    <!-- Template para Alerta -->
+    <template id="templateAlerta">
+        <div class="p-3 rounded-lg border-l-4">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span class="font-medium"></span>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template para Sugerencia -->
+    <template id="templateSugerencia">
+        <div class="bg-blue-50 rounded-lg border border-blue-200 p-4">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h5 class="font-semibold text-blue-900 mb-2">
+                        <i class="fas fa-arrows-alt mr-2"></i>
+                        <span class="titulo-sugerencia"></span>
+                    </h5>
+                    <p class="text-sm text-blue-700 mb-3 descripcion-sugerencia"></p>
+                    
+                    <!-- Vista Antes/Después -->
+                    <div class="grid grid-cols-2 gap-4 mb-3">
+                        <div class="antes-despues bg-white rounded p-2 border">
+                            <div class="text-xs font-medium text-gray-500 mb-1">ANTES</div>
+                            <div class="antes-contenido"></div>
+                        </div>
+                        <div class="antes-despues bg-white rounded p-2 border">
+                            <div class="text-xs font-medium text-gray-500 mb-1">DESPUÉS</div>
+                            <div class="despues-contenido"></div>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" 
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
-                        Distribuir Automáticamente
-                    </button>
-                    <button type="button" 
-                            onclick="cerrarModalDistribucion()"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                        Cancelar
-                    </button>
-                </div>
-            </form>
+                <button class="btn-aplicar-sugerencia ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-check mr-1"></i>
+                    Aplicar
+                </button>
+            </div>
         </div>
+    </template>    
     </div>
 </div>
-
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Selector de fecha
-    document.getElementById('fecha-selector').addEventListener('change', function() {
-        window.location.href = window.location.pathname + '?fecha=' + this.value;
-    });
-
-    // Filtros
-    document.getElementById('filtro-estado').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtro-tipo').addEventListener('change', aplicarFiltros);
-
-    // Formularios
-    document.getElementById('form-nueva-tarea').addEventListener('submit', crearTarea);
-    document.getElementById('form-distribucion').addEventListener('submit', distribuirSeguimientos);
-});
-
-// Funciones de filtrado
-function aplicarFiltros() {
-    const filtroEstado = document.getElementById('filtro-estado').value;
-    const filtroTipo = document.getElementById('filtro-tipo').value;
-    const tareas = document.querySelectorAll('.tarea-item');
-
-    tareas.forEach(tarea => {
-        const estado = tarea.dataset.estado;
-        const tipo = tarea.dataset.tipo;
-        
-        const mostrarEstado = !filtroEstado || estado === filtroEstado;
-        const mostrarTipo = !filtroTipo || tipo === filtroTipo;
-        
-        if (mostrarEstado && mostrarTipo) {
-            tarea.style.display = 'block';
+  document.addEventListener('DOMContentLoaded', function() {
+    // Configurar locale español
+    if (window.dayjs) {
+        dayjs.locale('es');
+    }
+});  
+// Función mejorada para actualizar estadísticas desde el componente Vue
+function actualizarEstadisticas(estadisticas) {
+    console.log('🔄 Actualizando estadísticas:', estadisticas);
+    
+    if (estadisticas) {
+        // Actualizar Pendientes Hoy
+        const pendientesEl = document.getElementById('stat-pendientes');
+        if (pendientesEl) {
+            pendientesEl.textContent = estadisticas.pendientes_hoy || 0;
+            console.log('✅ Pendientes actualizados:', estadisticas.pendientes_hoy);
         } else {
-            tarea.style.display = 'none';
+            console.error('❌ Elemento stat-pendientes no encontrado');
         }
-    });
-}
-
-// Funciones de tareas
-async function cambiarEstadoTarea(tareaId, completada) {
-    try {
-        const nuevoEstado = completada ? 'completada' : 'pendiente';
         
-        const response = await fetch(`/agenda/tareas/${tareaId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                estado: nuevoEstado,
-                resultado: completada ? 'Completada desde agenda' : null
-            })
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-            // Actualizar la interfaz
-            location.reload();
+        // Actualizar En Progreso
+        const progresoEl = document.getElementById('stat-progreso');
+        if (progresoEl) {
+            progresoEl.textContent = estadisticas.en_progreso_hoy || 0;
+            console.log('✅ En progreso actualizados:', estadisticas.en_progreso_hoy);
         } else {
-            alert('Error al actualizar la tarea');
-            // Revertir checkbox
-            event.target.checked = !completada;
+            console.error('❌ Elemento stat-progreso no encontrado');
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al actualizar la tarea');
-        event.target.checked = !completada;
+        
+        // Actualizar Completadas
+        const completadasEl = document.getElementById('stat-completadas');
+        if (completadasEl) {
+            completadasEl.textContent = estadisticas.completadas_hoy || 0;
+            console.log('✅ Completadas actualizadas:', estadisticas.completadas_hoy);
+        } else {
+            console.error('❌ Elemento stat-completadas no encontrado');
+        }
+        
+        // Actualizar Vencidas
+        const vencidasEl = document.getElementById('stat-vencidas');
+        if (vencidasEl) {
+            vencidasEl.textContent = estadisticas.vencidas || 0;
+            console.log('✅ Vencidas actualizadas:', estadisticas.vencidas);
+        } else {
+            console.error('❌ Elemento stat-vencidas no encontrado');
+        }
+    } else {
+        console.warn('⚠️ No se recibieron estadísticas para actualizar');
     }
 }
 
-async function crearTarea(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    
-    try {
-        const response = await fetch('/agenda/tareas', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-            cerrarModalNuevaTarea();
-            location.reload();
-        } else {
-            alert('Error al crear la tarea: ' + (data.message || 'Error desconocido'));
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al crear la tarea');
-    }
-}
-
-async function distribuirSeguimientos(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    
-    try {
-        const response = await fetch('/agenda/distribuir-seguimientos', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-            alert(`Distribución completada: ${data.tareas_creadas} tareas creadas`);
-            cerrarModalDistribucion();
-            location.reload();
-        } else {
-            alert('Error en la distribución: ' + (data.message || 'Error desconocido'));
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error en la distribución automática');
-    }
-}
-
-// Funciones de modales
+// Función simple para abrir modal de nueva tarea
 function abrirModalNuevaTarea() {
-    document.getElementById('modal-nueva-tarea').classList.remove('hidden');
-}
-
-function cerrarModalNuevaTarea() {
-    document.getElementById('modal-nueva-tarea').classList.add('hidden');
-    document.getElementById('form-nueva-tarea').reset();
-}
-
-function abrirModalDistribucion() {
-    document.getElementById('modal-distribucion').classList.remove('hidden');
-}
-
-function cerrarModalDistribucion() {
-    document.getElementById('modal-distribucion').classList.add('hidden');
-}
-
-// Funciones adicionales (simplificadas)
-function iniciarTarea(id) {
-    // Implementar inicio de tarea
-    console.log('Iniciar tarea:', id);
-}
-
-function posponerTarea(id) {
-    // Implementar posponer tarea
-    console.log('Posponer tarea:', id);
-}
-
-function editarTarea(id) {
-    // Implementar edición de tarea
-    console.log('Editar tarea:', id);
-}
-
-function eliminarTarea(id) {
-    if (confirm('¿Estás seguro de eliminar esta tarea?')) {
-        // Implementar eliminación
-        console.log('Eliminar tarea:', id);
+    console.log('🔥 Abriendo modal de nueva tarea');
+    // Acceder al componente TareaForm y mostrarlo
+    const app = window.vueApp;
+    if (app && app.$refs && app.$refs.tareaForm) {
+        app.$refs.tareaForm.mostrarModal = true;
     }
 }
 
-function convertirSeguimientoATarea(id) {
-    // Implementar conversión de seguimiento a tarea
-    console.log('Convertir seguimiento a tarea:', id);
+window.abrirModalNuevaTarea = abrirModalNuevaTarea;
+
+// Hacer la función global para que Vue pueda accederla
+window.actualizarEstadisticas = actualizarEstadisticas;
+
+// Test inicial para verificar que la función funciona
+console.log('🧪 Función actualizarEstadisticas disponible:', typeof window.actualizarEstadisticas);
+
+    
+        // ========================================
+        // 🚨 FUNCIONES DE DISTRIBUCIÓN AUTOMÁTICA
+        // ========================================
+
+        // Variables para el modal de distribución
+        let modalDistribucion = null;
+        let procesandoDistribucion = false;
+
+        // Función para abrir modal de distribución automática
+        function abrirDistribucionAutomatica() {
+            modalDistribucion = document.getElementById('modalDistribucion');
+            modalDistribucion.classList.remove('hidden');
+            
+            // Resetear modal a estado inicial
+            document.getElementById('formDistribucion').classList.remove('hidden');
+            document.getElementById('estadoExito').classList.add('hidden');
+            
+            // Calcular previsualización inicial
+            actualizarPrevision();
+            
+            console.log('🚨 Abriendo modal de distribución automática');
+        }
+
+        // Función para cerrar modal de distribución automática
+        function cerrarDistribucionAutomatica() {
+            if (modalDistribucion) {
+                modalDistribucion.classList.add('hidden');
+            }
+            
+            // Resetear formulario
+            procesandoDistribucion = false;
+            document.getElementById('btnDistribuir').disabled = false;
+            document.getElementById('textoBoton').textContent = 'DISTRIBUIR AHORA';
+            
+            console.log('❌ Cerrando modal de distribución automática');
+        }
+
+        // Función para actualizar la previsualización
+        function actualizarPrevision() {
+            const tareasPorDia = parseInt(document.getElementById('tareasPorDia').value);
+            const diasDistribuir = parseInt(document.getElementById('diasDistribuir').value);
+            const maxTareas = tareasPorDia * diasDistribuir;
+            
+            document.getElementById('maxTareas').textContent = maxTareas;
+        }
+
+        // Función para ejecutar la distribución
+        async function ejecutarDistribucion(event) {
+            event.preventDefault();
+            
+            if (procesandoDistribucion) return;
+            
+            procesandoDistribucion = true;
+            const btnDistribuir = document.getElementById('btnDistribuir');
+            const textoBoton = document.getElementById('textoBoton');
+            
+            // Cambiar estado del botón
+            btnDistribuir.disabled = true;
+            textoBoton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>DISTRIBUYENDO...';
+            
+            try {
+                const tareasPorDia = parseInt(document.getElementById('tareasPorDia').value);
+                const diasDistribuir = parseInt(document.getElementById('diasDistribuir').value);
+                
+                console.log('🚀 Iniciando distribución automática:', { tareasPorDia, diasDistribuir });
+                
+                const response = await axios.post('/crm-bioscom/public/api/agenda/distribuir-seguimientos', {
+                    usuario_asignado_id: 1, // TODO: usar usuario actual cuando se implemente auth
+                    tareas_por_dia: tareasPorDia,
+                    dias_habiles: diasDistribuir
+                });
+                
+                if (response.data.success) {
+                    console.log('✅ Distribución exitosa:', response.data);
+                    
+                    // Mostrar estado de éxito
+                    mostrarExitoDistribucion(response.data.data);
+                    
+                    // Recargar estadísticas después de 2 segundos
+                    setTimeout(() => {
+                        if (window.location.pathname.includes('/agenda/mi-dia')) {
+                            location.reload();
+                        }
+                    }, 3000);
+                    
+                } else {
+                    throw new Error(response.data.message || 'Error desconocido en la distribución');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error en distribución automática:', error);
+                
+                let mensajeError = 'Error de conexión. Por favor, inténtalo de nuevo.';
+                
+                if (error.response) {
+                    if (error.response.status === 422) {
+                        // Errores de validación
+                        const errores = error.response.data.errors;
+                        const mensajes = Object.values(errores).flat();
+                        mensajeError = `Error de validación: ${mensajes.join(', ')}`;
+                    } else {
+                        mensajeError = error.response.data.message || mensajeError;
+                    }
+                }
+                
+                // Mostrar error
+                if (window.mostrarToast) {
+                    window.mostrarToast('error', mensajeError);
+                } else {
+                    alert('Error: ' + mensajeError);
+                }
+                
+                // Restaurar botón
+                btnDistribuir.disabled = false;
+                textoBoton.textContent = 'DISTRIBUIR AHORA';
+                procesandoDistribucion = false;
+            }
+        }
+
+        // Función para mostrar el estado de éxito
+        function mostrarExitoDistribucion(data) {
+            const formDistribucion = document.getElementById('formDistribucion');
+            const estadoExito = document.getElementById('estadoExito');
+            const mensajeExito = document.getElementById('mensajeExito');
+            
+            // Ocultar formulario y mostrar éxito
+            formDistribucion.classList.add('hidden');
+            estadoExito.classList.remove('hidden');
+            
+            // Personalizar mensaje de éxito
+            const tareasCreadas = data.tareas_creadas || 0;
+            const diasDistribuir = parseInt(document.getElementById('diasDistribuir').value);
+            
+            if (tareasCreadas === 0) {
+                mensajeExito.textContent = '¡Perfecto! No hay seguimientos vencidos que distribuir. Tu agenda está al día.';
+            } else {
+                mensajeExito.textContent = `Se crearon ${tareasCreadas} tareas distribuidas en ${diasDistribuir} días hábiles. ¡Tu agenda está organizada!`;
+            }
+            
+            console.log('🎉 Mostrando éxito de distribución:', data);
+        }
+
+        // Hacer funciones globales
+        window.abrirDistribucionAutomatica = abrirDistribucionAutomatica;
+        window.cerrarDistribucionAutomatica = cerrarDistribucionAutomatica;
+        window.actualizarPrevision = actualizarPrevision;
+        window.ejecutarDistribucion = ejecutarDistribucion;
+
+        // Event listeners para actualizar previsualización
+        document.addEventListener('DOMContentLoaded', function() {
+            const tareasPorDiaSelect = document.getElementById('tareasPorDia');
+            const diasDistribuirSelect = document.getElementById('diasDistribuir');
+            
+            if (tareasPorDiaSelect) {
+                tareasPorDiaSelect.addEventListener('change', actualizarPrevision);
+            }
+            
+            if (diasDistribuirSelect) {
+                diasDistribuirSelect.addEventListener('change', actualizarPrevision);
+            }
+        });
+        // ==========================================
+        // 🧠 SISTEMA DE ANÁLISIS INTELIGENTE
+        // ==========================================
+
+        // Variables globales para análisis inteligente
+        let datosAnalisisActual = null;
+        let modalSugerencias = null;
+
+        // ==========================================
+        // 🔍 FUNCIONES DE ANÁLISIS Y DETECCIÓN
+        // ==========================================
+
+        // Función principal para cargar análisis inteligente
+        async function cargarAnalisisInteligente() {
+            try {
+                console.log('🧠 Iniciando análisis inteligente...');
+                
+                const response = await axios.get('/crm-bioscom/public/api/agenda/analizar-carga');
+                
+                if (response.data.success) {
+                    datosAnalisisActual = response.data.data;
+                    console.log('✅ Análisis completado:', datosAnalisisActual);
+                    
+                    // Mostrar widget inteligente apropiado
+                    mostrarWidgetInteligente(datosAnalisisActual);
+                } else {
+                    console.warn('⚠️ Error en análisis:', response.data.message);
+                }
+            } catch (error) {
+                console.error('❌ Error cargando análisis:', error);
+            }
+        }
+
+        // Mostrar el widget inteligente apropiado
+        function mostrarWidgetInteligente(datos) {
+            const widget = document.getElementById('widgetAnalisisInteligente');
+            const estadoNormal = document.getElementById('estadoNormal');
+            const alertaSobrecarga = document.getElementById('alertaSobrecarga');
+            const alertaModerada = document.getElementById('alertaModerada');
+            
+            // Ocultar todos los estados
+            estadoNormal.classList.add('hidden');
+            alertaSobrecarga.classList.add('hidden');
+            alertaModerada.classList.add('hidden');
+            
+            const { alertas, resumen } = datos;
+            
+            if (alertas.length === 0) {
+                // 🟢 Estado normal - todo bien
+                estadoNormal.classList.remove('hidden');
+                document.getElementById('mensajeNormal').textContent = 
+                    `Tu agenda está balanceada. ${resumen.total_tareas_semana} tareas distribuidas correctamente.`;
+            } else {
+                // Verificar si hay alertas de sobrecarga
+                const alertasSobrecarga = alertas.filter(a => a.tipo === 'sobrecarga');
+                
+                if (alertasSobrecarga.length > 0) {
+                    // 🔴 Alerta de sobrecarga crítica
+                    alertaSobrecarga.classList.remove('hidden');
+                    document.getElementById('mensajeSobrecarga').textContent = 
+                        `${alertasSobrecarga.length} día(s) con sobrecarga detectada. Necesitas redistribuir tareas.`;
+                } else {
+                    // 🟡 Alerta moderada
+                    alertaModerada.classList.remove('hidden');
+                    document.getElementById('mensajeModerado').textContent = 
+                        `${resumen.dias_alta_carga} día(s) con carga alta. Podrías optimizar tu agenda.`;
+                }
+            }
+            
+            // Mostrar el widget
+            widget.classList.remove('hidden');
+        }
+
+// ==========================================
+// 🎯 MODAL DE SUGERENCIAS INTELIGENTES
+// ==========================================
+
+// Abrir modal de sugerencias inteligentes
+function abrirSugerenciasInteligentes() {
+    modalSugerencias = document.getElementById('modalSugerencias');
+    modalSugerencias.classList.remove('hidden');
+    
+    // Mostrar loading
+    document.getElementById('loadingSugerencias').classList.remove('hidden');
+    document.getElementById('contenidoSugerencias').classList.add('hidden');
+    document.getElementById('botonesSugerencias').classList.add('hidden');
+    
+    console.log('🎯 Abriendo modal de sugerencias inteligentes');
+    
+    // Cargar contenido del modal
+    setTimeout(() => {
+        cargarContenidoSugerencias();
+    }, 1000); // Dar tiempo para que se vea el loading
 }
 
-function marcarTodasCompletadas() {
-    if (confirm('¿Marcar todas las tareas pendientes como completadas?')) {
-        // Implementar completar todas
-        console.log('Completar todas las tareas');
+// Cerrar modal de sugerencias inteligentes
+function cerrarSugerenciasInteligentes() {
+    if (modalSugerencias) {
+        modalSugerencias.classList.add('hidden');
     }
+    console.log('❌ Cerrando modal de sugerencias');
 }
 
-function exportarDia() {
-    // Implementar exportación del día
-    console.log('Exportar día');
-}
-</script>
-@endsection
-
-@section('styles')
-<style>
-/* Estilos personalizados para la agenda */
-.tarea-item {
-    transition: all 0.2s ease;
-}
-
-.tarea-item:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.tarea-completada {
-    opacity: 0.7;
-}
-
-.filtro-aplicado {
-    background-color: #eff6ff;
-    border-color: #3b82f6;
-}
-
-/* Animaciones para estadísticas */
-.estadistica-card {
-    transition: transform 0.2s ease;
-}
-
-.estadistica-card:hover {
-    transform: scale(1.02);
-}
-
-/* Estilos para alertas */
-.alerta-animada {
-    animation: slideInDown 0.3s ease;
-}
-
-@keyframes slideInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .tarea-item {
-        padding: 1rem;
+// Cargar contenido del modal con análisis
+function cargarContenidoSugerencias() {
+    if (!datosAnalisisActual) {
+        console.error('❌ No hay datos de análisis disponibles');
+        return;
     }
     
-    .estadistica-grid {
-        grid-template-columns: repeat(2, 1fr);
+    const { analisis_semanal, alertas, sugerencias } = datosAnalisisActual;
+    
+    // Ocultar loading
+    document.getElementById('loadingSugerencias').classList.add('hidden');
+    document.getElementById('contenidoSugerencias').classList.remove('hidden');
+    document.getElementById('botonesSugerencias').classList.remove('hidden');
+    
+    // Generar diagnóstico visual semanal (SIN TEMPLATES)
+    function generarDiagnosticoSemanal(analisisSemanal) {
+        const contenedor = document.getElementById('diagnosticoSemanal');
+        
+        if (!contenedor) {
+            console.error('❌ Contenedor diagnosticoSemanal no encontrado');
+            return;
+        }
+        
+        contenedor.innerHTML = '';
+        
+        Object.values(analisisSemanal).forEach(dia => {
+            // Crear elemento dinámicamente
+            const divDia = document.createElement('div');
+            divDia.className = 'text-center p-2 rounded-lg border';
+            
+            // Configurar colores según nivel de carga
+            if (dia.nivel_carga === 'sobrecarga') {
+                divDia.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
+            } else if (dia.nivel_carga === 'alta') {
+                divDia.classList.add('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
+            } else {
+                divDia.classList.add('bg-green-100', 'border-green-300', 'text-green-800');
+            }
+            
+            // Resaltar día actual
+            if (dia.es_hoy) {
+                divDia.classList.add('ring-2', 'ring-blue-400');
+            }
+            
+            // Configurar contenido
+            divDia.innerHTML = `
+                <div class="text-xs font-medium text-current mb-1">${dia.dia_nombre.substring(0, 3).toUpperCase()}</div>
+                <div class="text-lg font-bold mb-1">${dia.cantidad_tareas}</div>
+                <div class="text-xs text-current">tareas</div>
+            `;
+            
+            contenedor.appendChild(divDia);
+        });
+        
+        console.log('✅ Diagnóstico semanal generado');
+    }
+    
+    // Mostrar alertas si las hay
+    if (alertas.length > 0) {
+        mostrarAlertas(alertas);
+    }
+    
+    // Mostrar sugerencias si las hay
+    if (sugerencias.length > 0) {
+        mostrarSugerencias(sugerencias);
+        document.getElementById('btnAplicarTodo').classList.remove('hidden');
+    } else {
+        // Mostrar estado saludable
+        document.getElementById('estadoSaludable').classList.remove('hidden');
     }
 }
-</style>
-@endsection
+
+// Generar diagnóstico visual semanal
+function generarDiagnosticoSemanal(analisisSemanal) {
+    const contenedor = document.getElementById('diagnosticoSemanal');
+    const template = document.getElementById('templateDiaDiagnostico');
+    
+    contenedor.innerHTML = '';
+    
+    Object.values(analisisSemanal).forEach(dia => {
+        const elemento = template.content.cloneNode(true);
+        const divDia = elemento.querySelector('div');
+        
+        // Configurar contenido
+        divDia.querySelector('.text-xs.font-medium').textContent = dia.dia_nombre.substring(0, 3).toUpperCase();
+        divDia.querySelector('.text-lg.font-bold').textContent = dia.cantidad_tareas;
+        divDia.querySelector('.text-xs:last-child').textContent = 'tareas';
+        
+        // Configurar colores según nivel de carga
+        if (dia.nivel_carga === 'sobrecarga') {
+            divDia.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
+        } else if (dia.nivel_carga === 'alta') {
+            divDia.classList.add('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
+        } else {
+            divDia.classList.add('bg-green-100', 'border-green-300', 'text-green-800');
+        }
+        
+        // Resaltar día actual
+        if (dia.es_hoy) {
+            divDia.classList.add('ring-2', 'ring-blue-400');
+        }
+        
+        contenedor.appendChild(elemento);
+    });
+}
+
+// Mostrar alertas críticas
+// Mostrar alertas críticas (SIN TEMPLATES)
+function mostrarAlertas(alertas) {
+    const seccion = document.getElementById('seccionAlertas');
+    const lista = document.getElementById('listaAlertas');
+    
+    if (!lista) return;
+    
+    lista.innerHTML = '';
+    
+    alertas.forEach(alerta => {
+        const divAlerta = document.createElement('div');
+        divAlerta.className = 'p-3 rounded-lg border-l-4';
+        
+        // Configurar colores según prioridad
+        if (alerta.prioridad === 'urgente') {
+            divAlerta.classList.add('bg-red-50', 'border-red-400', 'text-red-800');
+        } else if (alerta.prioridad === 'alta') {
+            divAlerta.classList.add('bg-orange-50', 'border-orange-400', 'text-orange-800');
+        } else {
+            divAlerta.classList.add('bg-yellow-50', 'border-yellow-400', 'text-yellow-800');
+        }
+        
+        divAlerta.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span class="font-medium">${alerta.mensaje}</span>
+            </div>
+        `;
+        
+        lista.appendChild(divAlerta);
+    });
+    
+    seccion.classList.remove('hidden');
+}
+
+// Mostrar sugerencias (SIMPLIFICADO)
+    function mostrarSugerencias(sugerencias) {
+        const seccion = document.getElementById('seccionSugerencias');
+        const lista = document.getElementById('listaSugerencias');
+        
+        if (!lista) return;
+        
+        lista.innerHTML = '';
+        
+        sugerencias.forEach((sugerencia, index) => {
+            const divSugerencia = document.createElement('div');
+            divSugerencia.className = 'bg-blue-50 rounded-lg border border-blue-200 p-4';
+            
+            const impacto = sugerencia.impacto;
+            divSugerencia.innerHTML = `
+                <h5 class="font-semibold text-blue-900 mb-2">
+                    <i class="fas fa-arrows-alt mr-2"></i>
+                    Redistribuir ${sugerencia.cantidad_tareas} tareas
+                </h5>
+                <p class="text-sm text-blue-700 mb-3">${sugerencia.beneficio}</p>
+                
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div class="bg-white rounded p-2 border">
+                        <div class="text-xs font-medium text-gray-500 mb-1">ANTES</div>
+                        <div class="text-red-600 font-bold">${impacto.origen_antes} tareas</div>
+                        <div class="text-xs text-gray-500">Sobrecargado</div>
+                    </div>
+                    <div class="bg-white rounded p-2 border">
+                        <div class="text-xs font-medium text-gray-500 mb-1">DESPUÉS</div>
+                        <div class="text-green-600 font-bold">${impacto.origen_despues} tareas</div>
+                        <div class="text-xs text-gray-500">Balanceado</div>
+                    </div>
+                </div>
+                
+                <button onclick="aplicarSugerencia(${index})" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-check mr-1"></i>
+                    Aplicar Optimización
+                </button>
+            `;
+            
+            lista.appendChild(divSugerencia);
+        });
+        
+        seccion.classList.remove('hidden');
+    }
+
+    // ==========================================
+    // ⚡ APLICACIÓN DE OPTIMIZACIONES
+    // ==========================================
+
+    // Aplicar una sugerencia específica
+    async function aplicarSugerencia(index) {
+        if (!datosAnalisisActual || !datosAnalisisActual.sugerencias[index]) {
+            console.error('❌ Sugerencia no encontrada');
+            return;
+        }
+        
+        const sugerencia = datosAnalisisActual.sugerencias[index];
+        console.log('⚡ Aplicando sugerencia:', sugerencia);
+        
+        try {
+            // Aplicar cada tarea individualmente
+            for (const tareaId of sugerencia.tareas_a_mover) {
+                await axios.put(`/crm-bioscom/public/api/agenda/tareas/${tareaId}`, {
+                    fecha_vencimiento: sugerencia.dia_destino
+                });
+            }
+            
+            if (window.mostrarToast) {
+                window.mostrarToast('success', `¡Optimización aplicada! ${sugerencia.cantidad_tareas} tareas redistribuidas.`);
+            }
+            
+            // Cerrar modal y recargar página
+            cerrarSugerenciasInteligentes();
+            setTimeout(() => location.reload(), 1000);
+            
+        } catch (error) {
+            console.error('❌ Error aplicando sugerencia:', error);
+            if (window.mostrarToast) {
+                window.mostrarToast('error', 'Error al aplicar la optimización');
+            }
+        }
+    }
+
+    // Aplicar todas las sugerencias
+    async function aplicarTodasLasSugerencias() {
+        if (!datosAnalisisActual || !datosAnalisisActual.sugerencias.length) {
+            return;
+        }
+        
+        if (!confirm('¿Estás seguro de aplicar todas las optimizaciones? Esta acción reorganizará tu agenda automáticamente.')) {
+            return;
+        }
+        
+        console.log('⚡ Aplicando todas las sugerencias...');
+        
+        try {
+            for (let i = 0; i < datosAnalisisActual.sugerencias.length; i++) {
+                await aplicarSugerencia(i);
+            }
+        } catch (error) {
+            console.error('❌ Error aplicando todas las sugerencias:', error);
+        }
+    }
+
+    // ==========================================
+    // 🚀 INICIALIZACIÓN AUTOMÁTICA
+    // ==========================================
+
+    // Hacer funciones globales
+    window.abrirSugerenciasInteligentes = abrirSugerenciasInteligentes;
+    window.cerrarSugerenciasInteligentes = cerrarSugerenciasInteligentes;
+    window.aplicarSugerencia = aplicarSugerencia;
+    window.aplicarTodasLasSugerencias = aplicarTodasLasSugerencias;
+    window.cargarAnalisisInteligente = cargarAnalisisInteligente;
+
+    // Ejecutar análisis automáticamente cuando se carga la página
+    document.addEventListener('DOMContentLoaded', function() {
+        // Esperar a que Vue termine de cargar las estadísticas básicas
+        setTimeout(() => {
+            cargarAnalisisInteligente();
+        }, 2000);
+    });
+
+</script>
+@endpush

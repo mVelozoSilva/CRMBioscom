@@ -3,16 +3,38 @@
 import { createApp } from 'vue';
 import axios from 'axios';
 
+
 // Importar todos los componentes
 import CotizacionForm from './components/CotizacionForm.vue';
 import ClienteForm from './components/ClienteForm.vue';
 import ClienteTable from './components/ClienteTable.vue';
 import SeguimientoTable from './components/SeguimientoTable.vue'; 
 import CotizacionTable from './components/CotizacionTable.vue';
+import TareaDayList from './components/TareaDayList.vue';
+import TareaForm from './components/TareaForm.vue';
+import TareaWeekView from './components/TareaWeekView.vue';
+import CobranzaTable from './components/CobranzaTable.vue'; 
+import UserDisplayPreferences from './components/UserDisplayPreferences.vue';
+import CobranzaForm from './components/CobranzaForm.vue';
+import FormularioInteligente from './components/FormularioInteligente.vue';
+import ServicioTecnicoTable from './components/servicio_tecnico/ServicioTecnicoTable.vue';
+import ServicioTecnicoForm from './components/servicio_tecnico/ServicioTecnicoForm.vue';
+import CampaniaForm from './components/campanias/CampaniaForm.vue';
+import CampaniaTable from './components/campanias/CampaniaTable.vue';
+import ArchivoForm from './components/archivos/ArchivoForm.vue';
+import ArchivoTable from './components/archivos/ArchivoTable.vue';
+import NotificacionForm from './components/notificaciones/NotificacionForm.vue';
+import NotificacionTable from './components/notificaciones/NotificacionTable.vue';
+import FormularioGestorForm from './components/formularios/FormularioGestorForm.vue';
+import FormularioGestorTable from './components/formularios/FormularioGestorTable.vue';
+import ConfiguracionSupervisorForm from './components/configuracion/ConfiguracionSupervisorForm.vue';
+import ConfiguracionSupervisorTable from './components/configuracion/ConfiguracionSupervisorTable.vue';
+
 
 
 console.log('🚀 Iniciando Vue 3...');
 console.log('✅ Componentes importados exitosamente');
+
 
 // Configurar axios globalmente ANTES de crear la app
 console.log('🔧 Configurando Axios...');
@@ -113,7 +135,7 @@ function initializeVue() {
                 console.log('🎯 Aplicación Vue montada exitosamente!');
             }
         });
-
+        
         // Registrar componentes globalmente
         console.log('📝 Registrando componentes...');
         app.component('cotizacion-form', CotizacionForm);  
@@ -121,8 +143,29 @@ function initializeVue() {
         app.component('seguimiento-table', SeguimientoTable);
         app.component('cotizacion-table', CotizacionTable); 
         app.component('cliente-table', ClienteTable);
+        app.component('tarea-day-list', TareaDayList);
+        app.component('tarea-form', TareaForm);
+        app.component('tarea-week-view', TareaWeekView);
+        app.component('cobranza-table', CobranzaTable); // ← REGISTRAR NUEVO COMPONENTE
+        app.component('user-display-preferences', UserDisplayPreferences)
+        app.component('cobranza-form', CobranzaForm); // ← REGISTRAR NUEVO COMPONENTE
+        app.component('formulario-inteligente', FormularioInteligente); // ← REGISTRAR NUEVO COMPONENTE
+        app.component('campania-table', CampaniaTable);
+        app.component('campania-form', CampaniaForm);
+        app.component('servicio-tecnico-table', ServicioTecnicoTable);
+        app.component('servicio-tecnico-form', ServicioTecnicoForm);
+        app.component('formulario-gestor-form', FormularioGestorForm);
+        app.component('formulario-gestor-table', FormularioGestorTable);
+        app.component('notificacion-form', NotificacionForm);
+        app.component('notificacion-table', NotificacionTable);
+        app.component('archivo-form', ArchivoForm);
+        app.component('archivo-table', ArchivoTable);
+        app.component('configuracion-supervisor-table', ConfiguracionSupervisorTable);
+        app.component('configuracion-supervisor-form', ConfiguracionSupervisorForm);
+      
 
-        console.log('✅ Componentes registrados:', ['cotizacion-form', 'cliente-form', 'seguimiento-table', 'cotizacion-table']);
+
+        console.log('✅ Componentes registrados:', ['cotizacion-form', 'cliente-form', 'seguimiento-table', 'cotizacion-table', 'cliente-table', 'tarea-day-list', 'tarea-form', 'tarea-week-view', 'cobranza-table', 'user-display-preferences', 'cobranza-form', 'formulario-inteligente', 'campania-table', 'campania-form', 'servicio-tecnico-table', 'servicio-tecnico-form', 'archivos'].join(', '));
 
         // 🔧 HACER DISPONIBLE MOSTRARTOAST EN VUE
         app.config.globalProperties.$mostrarToast = window.mostrarToast;
@@ -130,12 +173,15 @@ function initializeVue() {
         // Montar la aplicación
         console.log('🎯 Montando Vue en #app...');
         const mountedApp = app.mount('#app');
+        document.getElementById('app').__vue_app__ = app;
         console.log('✅ Vue montado exitosamente en #app');
         
         // Hacer disponible la instancia globalmente para debugging
         window.vueApp = mountedApp;
         
-    } catch (mountError) {
+    } 
+    
+    catch (mountError) {
         console.error('❌ Error crítico al montar Vue:', mountError);
         console.error('Stack trace:', mountError.stack);
     }

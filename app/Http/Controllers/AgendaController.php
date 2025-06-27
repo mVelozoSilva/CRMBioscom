@@ -3,840 +3,736 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tarea;
-use App\Models\Seguimiento;
-use App\Models\User;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
-use App\Models\ColaSeguimiento;
+use App\Models\Seguimiento;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Exception;
 
 class AgendaController extends Controller
 {
     /**
-     * Vista "Mi Día" - Dashboard principal de agenda
-     * Muestra todas las tareas del día con información contextual
+     * Constructor del controlador
      */
-    public function miDia(Request $request)
+    public function __construct()
     {
-        $usuario = Auth::user();
-        $fecha = $request->get('fecha', Carbon::today()->format('Y-m-d'));
-        $fechaCarbon = Carbon::parse($fecha);
-
-        // Tareas del día
-        $tareas = Tarea::with(['cliente', 'seguimiento.cotizacion', 'cotizacion'])
-            ->deUsuario($usuario->id)
-            ->whereDate('fecha_tarea', $fechaCarbon)
-            ->orderBy('prioridad', 'desc')
-            ->orderBy('hora_inicio', 'asc')
-            ->get();
-
-        // Seguimientos vencidos que pueden convertirse en tareas
-        $seguimientosVencidos = Seguimiento::with(['cliente', 'cotizacion'])
-            ->where('vendedor_id', $usuario->id)
-            ->where('proxima_gestion', '<', Carbon::today())
-            ->whereIn('estado', ['pendiente', 'en_proceso'])
-            ->orderBy('proxima_gestion', 'asc')
-            ->limit(5)
-            ->get();
-
-        // Estadísticas del día
-        $estadisticas = [
-            'total_tareas' => $tareas->count(),
-            'completadas' => $tareas->where('estado', 'completada')->count(),
-            'pendientes' => $tareas->where('estado', 'pendiente')->count(),
-            'en_progreso' => $tareas->where('estado', 'en_progreso')->count(),
-            'vencidas' => $tareas->where('es_vencida', true)->count(),
-            'tiempo_estimado_total' => $tareas->sum('duracion_estimada'),
-            'seguimientos_vencidos' => $seguimientosVencidos->count()
-        ];
-
-        // Carga de trabajo de la semana
-        $cargaSemana = $this->obtenerCargaSemana($usuario->id, $fechaCarbon);
-
-        // Próximas tareas (siguiente día laboral)
-        $proximasTareas = $this->obtenerProximasTareas($usuario->id, $fechaCarbon);
-
-        // Alertas y notificaciones
-        $alertas = $this->generarAlertas($usuario->id, $fechaCarbon);
-
-        return view('agenda.mi-dia', compact(
-            'tareas', 
-            'seguimientosVencidos', 
-            'estadisticas', 
-            'cargaSemana', 
-            'proximasTareas', 
-            'alertas', 
-            'fechaCarbon'
-        ));
+        // TODO: Descomentar cuando se implemente el sistema de roles spatie/laravel-permission
+        // $this->middleware('auth');
     }
 
     /**
-     * Vista "Mi Semana" - Planificación semanal
-     * Vista tipo calendario con distribución de tareas
+     * Vista principal de la agenda
      */
-    public function miSemana(Request $request)
+    public function index()
     {
-        $usuario = Auth::user();
-        $semana = $request->get('semana', Carbon::now()->format('Y-W'));
-        
-        // Parsear semana (formato: YYYY-WW)
-        [$year, $weekNumber] = explode('-', $semana);
-        $fechaInicio = Carbon::now()->setISODate($year, $weekNumber)->startOfWeek();
-        $fechaFin = clone $fechaInicio;
-        $fechaFin->endOfWeek();
-
-        // Tareas de la semana agrupadas por día
-        $tareasSemana = Tarea::with(['cliente', 'seguimiento.cotizacion', 'cotizacion'])
-            ->deUsuario($usuario->id)
-            ->entreFechas($fechaInicio, $fechaFin)
-            ->orderBy('fecha_tarea')
-            ->orderBy('hora_inicio')
-            ->get()
-            ->groupBy(function($tarea) {
-                return $tarea->fecha_tarea->format('Y-m-d');
-            });
-
-        // Estadísticas de la semana
-        $estadisticasSemana = [
-            'total_tareas' => 0,
-            'completadas' => 0,
-            'carga_trabajo_total' => 0,
-            'dias_con_tareas' => 0,
-            'promedio_tareas_dia' => 0
-        ];
-
-        foreach ($tareasSemana as $dia => $tareasDia) {
-            $estadisticasSemana['total_tareas'] += $tareasDia->count();
-            $estadisticasSemana['completadas'] += $tareasDia->where('estado', 'completada')->count();
-            $estadisticasSemana['carga_trabajo_total'] += $tareasDia->sum('duracion_estimada');
-        }
-
-        $estadisticasSemana['dias_con_tareas'] = count($tareasSemana);
-        $estadisticasSemana['promedio_tareas_dia'] = $estadisticasSemana['dias_con_tareas'] > 0 ? 
-            round($estadisticasSemana['total_tareas'] / $estadisticasSemana['dias_con_tareas'], 1) : 0;
-
-        // Generar estructura de días para el calendario
-        $diasSemana = [];
-        for ($i = 0; $i < 7; $i++) {
-            $fecha = clone $fechaInicio;
-            $fecha->addDays($i);
-            $fechaStr = $fecha->format('Y-m-d');
-            
-            $diasSemana[] = [
-                'fecha' => $fecha,
-                'fecha_str' => $fechaStr,
-                'es_hoy' => $fecha->isToday(),
-                'es_fin_semana' => $fecha->isWeekend(),
-                'tareas' => $tareasSemana[$fechaStr] ?? collect(),
-                'carga_trabajo' => ($tareasSemana[$fechaStr] ?? collect())->sum('duracion_estimada')
-            ];
-        }
-
-        // Capacidad de trabajo recomendada por día (en minutos)
-        $capacidadDiaria = 480; // 8 horas
-
-        return view('agenda.mi-semana', compact(
-            'diasSemana', 
-            'estadisticasSemana', 
-            'fechaInicio', 
-            'fechaFin', 
-            'capacidadDiaria',
-            'semana'
-        ));
+        return view('agenda.index');
     }
 
     /**
-     * Crear nueva tarea
-     * Soporte para creación rápida y detallada
+     * Vista "Mi Día" - Tareas del día actual
      */
-    public function crear(Request $request)
+    public function miDia()
     {
-        $validator = Validator::make($request->all(), [
-            'titulo' => 'required|string|max:255',
-            'descripcion' => 'nullable|string|max:1000',
-            'tipo' => 'required|in:' . implode(',', Tarea::TIPOS),
-            'fecha_tarea' => 'required|date|after_or_equal:today',
-            'hora_inicio' => 'nullable|date_format:H:i',
-            'hora_fin' => 'nullable|date_format:H:i|after:hora_inicio',
-            'duracion_estimada' => 'nullable|integer|min:5|max:600',
-            'prioridad' => 'required|in:' . implode(',', Tarea::PRIORIDADES),
-            'cliente_id' => 'nullable|exists:clientes,id',
-            'seguimiento_id' => 'nullable|exists:seguimientos,id',
-            'cotizacion_id' => 'nullable|exists:cotizaciones,id',
-            'tiene_recordatorio' => 'boolean',
-            'recordatorio_en' => 'nullable|date|after:now',
-            'tipo_recordatorio' => 'nullable|in:' . implode(',', Tarea::TIPOS_RECORDATORIO),
-        ]);
+        return view('agenda.mi-dia');
+    }
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
+    /**
+     * Mostrar vista de Mi Semana
+     */
+    public function miSemana()
+    {
+        return view('agenda.mi-semana');
+    }
 
+    /**
+     * API para obtener tareas de la semana
+     */
+    public function obtenerTareasSemana(Request $request): JsonResponse
+    {
         try {
-            DB::beginTransaction();
-
-            // Determinar duración si no se especifica
-            $duracionEstimada = $request->duracion_estimada;
-            if (!$duracionEstimada && $request->hora_inicio && $request->hora_fin) {
-                $inicio = Carbon::createFromFormat('H:i', $request->hora_inicio);
-                $fin = Carbon::createFromFormat('H:i', $request->hora_fin);
-                $duracionEstimada = $fin->diffInMinutes($inicio);
+            Carbon::setLocale('es');
+            // Obtener parámetros
+            
+            $semana = $request->get('semana', 'actual'); // 'actual', 'siguiente', 'anterior'
+            $usuario_id = $request->get('usuario_id', 1); // TODO: usar auth()->id()
+            
+            // Calcular fechas de la semana
+            $hoy = Carbon::now();
+            
+            switch ($semana) {
+                case 'siguiente':
+                    $inicioSemana = $hoy->copy()->addWeek()->startOfWeek();
+                    break;
+                case 'anterior':
+                    $inicioSemana = $hoy->copy()->subWeek()->startOfWeek();
+                    break;
+                default: // 'actual'
+                    $inicioSemana = $hoy->copy()->startOfWeek();
             }
+            
+            $finSemana = $inicioSemana->copy()->endOfWeek();
+            
+            // Obtener tareas de la semana
+            $tareas = Tarea::with(['usuarioAsignado', 'usuarioCreador', 'cliente', 'cotizacion'])
+                ->where('usuario_asignado_id', $usuario_id)
+                ->whereBetween('fecha_vencimiento', [$inicioSemana->format('Y-m-d'), $finSemana->format('Y-m-d')])
+                ->orderBy('fecha_vencimiento')
+                ->orderBy('hora_estimada')
+                ->get();
+                
+            // Agrupar tareas por día
+            $tareasPorDia = [];
+            for ($i = 0; $i < 7; $i++) {
+                $fecha = $inicioSemana->copy()->addDays($i);
+                $fechaStr = $fecha->format('Y-m-d');
+                
+                // Filtrar tareas de este día específico
+                $tareasDelDia = $tareas->filter(function($tarea) use ($fechaStr) {
+                    return $tarea->fecha_vencimiento && $tarea->fecha_vencimiento->format('Y-m-d') === $fechaStr;
+                })->values();
 
-            // Crear tarea
-            $tarea = Tarea::create([
-                'titulo' => $request->titulo,
-                'descripcion' => $request->descripcion,
-                'usuario_id' => Auth::id(),
-                'tipo' => $request->tipo,
-                'origen' => 'manual',
-                'cliente_id' => $request->cliente_id,
-                'seguimiento_id' => $request->seguimiento_id,
-                'cotizacion_id' => $request->cotizacion_id,
-                'fecha_tarea' => $request->fecha_tarea,
-                'hora_inicio' => $request->hora_inicio,
-                'hora_fin' => $request->hora_fin,
-                'duracion_estimada' => $duracionEstimada,
-                'estado' => 'pendiente',
-                'prioridad' => $request->prioridad,
-                'tiene_recordatorio' => $request->boolean('tiene_recordatorio'),
-                'recordatorio_en' => $request->recordatorio_en,
-                'tipo_recordatorio' => $request->tipo_recordatorio,
-                'es_distribuida_automaticamente' => false,
-                'intentos_completar' => 0
-            ]);
-
-            // Actualizar seguimiento relacionado si existe
-            if ($request->seguimiento_id) {
-                $seguimiento = Seguimiento::find($request->seguimiento_id);
-                if ($seguimiento && $seguimiento->estado === 'pendiente') {
-                    $seguimiento->update(['estado' => 'en_proceso']);
-                }
+                $tareasPorDia[$fechaStr] = [
+                    'fecha' => $fechaStr,
+                    'dia_nombre' => $fecha->locale('es')->translatedFormat('l'),
+                    'dia_numero' => $fecha->format('d'),
+                    'mes_nombre' => $fecha->locale('es')->translatedFormat('M'),
+                    'es_hoy' => $fecha->isToday(),
+                    'es_pasado' => $fecha->isPast(),
+                    'tareas' => $tareasDelDia
+                ];
             }
-
-            DB::commit();
-
-            // Cargar relaciones para respuesta
-            $tarea->load(['cliente', 'seguimiento', 'cotizacion']);
-
-            Log::info("Tarea creada: {$tarea->titulo} para " . Auth::user()->name);
+            
+            // Estadísticas de la semana
+            $estadisticas = [
+                'total_semana' => $tareas->count(),
+                'completadas' => $tareas->where('estado', 'completada')->count(),
+                'pendientes' => $tareas->whereIn('estado', ['pendiente', 'en_progreso'])->count(),
+                'vencidas' => $tareas->where('estado', 'vencida')->count(),
+                'fecha_inicio' => $inicioSemana->format('d/m/Y'),
+                'fecha_fin' => $finSemana->format('d/m/Y')
+            ];
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tarea creada exitosamente.',
-                'tarea' => $tarea
+                'data' => $tareasPorDia,
+                'estadisticas' => $estadisticas,
+                'message' => 'Tareas de la semana obtenidas exitosamente'
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener tareas de la semana: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    /**
+     * API: Obtener tareas con filtros y paginación
+     */
+    public function obtenerTareas(Request $request): JsonResponse
+    {
+        try {
+            $query = Tarea::with(['usuarioAsignado', 'usuarioCreador', 'cliente', 'cotizacion', 'seguimiento']);
+
+            // TODO: Filtrar por usuario actual cuando se implemente autenticación
+            // $query->where('usuario_asignado_id', auth()->id());
+
+            // Filtros de búsqueda
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('titulo', 'like', "%{$search}%")
+                      ->orWhere('descripcion', 'like', "%{$search}%")
+                      ->orWhere('notas', 'like', "%{$search}%");
+                });
+            }
+
+            // Filtro por fecha
+            if ($request->filled('fecha')) {
+                $fecha = $request->fecha;
+                if ($fecha === 'hoy') {
+                    $query->hoy();
+                } elseif ($fecha === 'manana') {
+                    $query->whereDate('fecha_vencimiento', Carbon::tomorrow());
+                } elseif ($fecha === 'esta_semana') {
+                    $query->estaSemana();
+                } elseif ($fecha === 'vencidas') {
+                    $query->vencidas();
+                } else {
+                    $query->whereDate('fecha_vencimiento', $fecha);
+                }
+            }
+
+            // Filtro por estado
+            if ($request->filled('estado')) {
+                $query->where('estado', $request->estado);
+            }
+
+            // Filtro por prioridad
+            if ($request->filled('prioridad')) {
+                $query->where('prioridad', $request->prioridad);
+            }
+
+            // Filtro por tipo
+            if ($request->filled('tipo')) {
+                $query->where('tipo', $request->tipo);
+            }
+
+            // Filtro por usuario asignado (para jefes/administradores)
+            if ($request->filled('usuario_asignado_id')) {
+                $query->where('usuario_asignado_id', $request->usuario_asignado_id);
+            }
+
+            // Ordenamiento
+            $sortField = $request->get('sort_field', 'fecha_vencimiento');
+            $sortDirection = $request->get('sort_direction', 'asc');
+            $query->orderBy($sortField, $sortDirection);
+
+            // Ordenamiento secundario por prioridad y hora
+            $query->orderByRaw("FIELD(prioridad, 'urgente', 'alta', 'media', 'baja')")
+                  ->orderBy('hora_estimada', 'asc');
+
+            // Paginación
+            $perPage = $request->get('per_page', 20);
+            $tareas = $query->paginate($perPage);
+
+            // Estadísticas rápidas
+            $estadisticas = [
+                'total' => Tarea::count(),
+                'pendientes_hoy' => Tarea::hoy()->pendientes()->count(),
+                'vencidas' => Tarea::vencidas()->count(),
+                'completadas_hoy' => Tarea::hoy()->where('estado', 'completada')->count(),
+                'esta_semana' => Tarea::estaSemana()->pendientes()->count(),
+                'en_progreso_hoy' => Tarea::hoy()->where('estado', 'en_progreso')->count()
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $tareas,
+                'estadisticas' => $estadisticas,
+                'message' => 'Tareas obtenidas exitosamente'
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener las tareas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API: Crear nueva tarea
+     */
+    public function store(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'titulo' => 'required|string|max:255',
+                'descripcion' => 'nullable|string',
+                'usuario_asignado_id' => 'required|exists:users,id',
+                'tipo' => 'required|in:' . implode(',', Tarea::TIPOS_TAREA),
+                'prioridad' => 'required|in:' . implode(',', Tarea::PRIORIDADES_TAREA),
+                'fecha_vencimiento' => 'required|date|after_or_equal:today',
+                'hora_estimada' => 'nullable|date_format:H:i',
+                'duracion_estimada_minutos' => 'nullable|integer|min:1|max:1440',
+                'cliente_id' => 'nullable|exists:clientes,id',
+                'cotizacion_id' => 'nullable|exists:cotizaciones,id',
+                'seguimiento_id' => 'nullable|exists:seguimientos,id',
+                'notas' => 'nullable|string',
+                'metadatos' => 'nullable|array'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $data = $validator->validated();
+            
+            // TODO: Usar usuario autenticado cuando se implemente auth()
+            // $data['usuario_creador_id'] = auth()->id();
+            $data['usuario_creador_id'] = $data['usuario_asignado_id']; // Temporal
+
+            $tarea = Tarea::create($data);
+            $tarea->load(['usuarioAsignado', 'usuarioCreador', 'cliente', 'cotizacion', 'seguimiento']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $tarea,
+                'message' => 'Tarea creada exitosamente'
             ], 201);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error al crear tarea: ' . $e->getMessage());
-            
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno al crear la tarea.'
+                'message' => 'Error al crear la tarea: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Actualizar tarea existente
-     * Soporte para edición completa y cambios de estado
+     * API: Obtener tarea específica
      */
-    public function actualizar(Request $request, Tarea $tarea)
+    public function show(Tarea $tarea): JsonResponse
     {
-        // Verificar permisos
-        if ($tarea->usuario_id !== Auth::id() && !Auth::user()->hasRole(['jefe_ventas', 'administrador'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No tienes permisos para editar esta tarea.'
-            ], 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'titulo' => 'sometimes|required|string|max:255',
-            'descripcion' => 'nullable|string|max:1000',
-            'fecha_tarea' => 'sometimes|required|date',
-            'hora_inicio' => 'nullable|date_format:H:i',
-            'hora_fin' => 'nullable|date_format:H:i|after:hora_inicio',
-            'duracion_estimada' => 'nullable|integer|min:5|max:600',
-            'estado' => 'sometimes|required|in:' . implode(',', Tarea::ESTADOS),
-            'prioridad' => 'sometimes|required|in:' . implode(',', Tarea::PRIORIDADES),
-            'notas' => 'nullable|string|max:1000',
-            'resultado' => 'nullable|string|max:1000',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            DB::beginTransaction();
-
-            $datosActualizacion = $request->only([
-                'titulo', 'descripcion', 'fecha_tarea', 'hora_inicio', 'hora_fin', 
-                'duracion_estimada', 'estado', 'prioridad', 'notas', 'resultado'
-            ]);
-
-            // Manejar cambio de estado especial
-            if ($request->has('estado')) {
-                switch ($request->estado) {
-                    case 'completada':
-                        $datosActualizacion['completada_en'] = Carbon::now();
-                        break;
-                    case 'en_progreso':
-                        if ($tarea->estado === 'pendiente') {
-                            $datosActualizacion['hora_inicio'] = $datosActualizacion['hora_inicio'] ?? Carbon::now()->format('H:i');
-                        }
-                        break;
-                }
-            }
-
-            $tarea->update($datosActualizacion);
-
-            // Actualizar seguimiento relacionado si es necesario
-            if ($request->estado === 'completada' && $tarea->seguimiento_id) {
-                $seguimiento = $tarea->seguimiento;
-                if ($seguimiento) {
-                    $seguimiento->update([
-                        'estado' => 'completado',
-                        'ultima_gestion' => Carbon::today(),
-                        'resultado_ultima_gestion' => $request->resultado
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            // Recargar relaciones
-            $tarea->load(['cliente', 'seguimiento', 'cotizacion']);
-
-            Log::info("Tarea actualizada: {$tarea->titulo} (ID: {$tarea->id})");
+            $tarea->load(['usuarioAsignado', 'usuarioCreador', 'cliente', 'cotizacion', 'seguimiento']);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tarea actualizada exitosamente.',
-                'tarea' => $tarea
+                'data' => $tarea,
+                'message' => 'Tarea obtenida exitosamente'
             ]);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Error al actualizar tarea {$tarea->id}: " . $e->getMessage());
-            
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno al actualizar la tarea.'
+                'message' => 'Error al obtener la tarea: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Completar tarea con resultado
-     * Método específico para marcar tareas como completadas
+     * API: Actualizar tarea
      */
-    public function completarTarea(Request $request, Tarea $tarea)
+    public function update(Request $request, Tarea $tarea): JsonResponse
     {
-        // Verificar permisos
-        if ($tarea->usuario_id !== Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No tienes permisos para completar esta tarea.'
-            ], 403);
-        }
-
-        if ($tarea->estado === 'completada') {
-            return response()->json([
-                'success' => false,
-                'message' => 'La tarea ya está completada.'
-            ], 422);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'resultado' => 'required|string|max:1000',
-            'hora_fin' => 'nullable|date_format:H:i',
-            'notas_adicionales' => 'nullable|string|max:500'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            DB::beginTransaction();
+            $validator = Validator::make($request->all(), [
+                'titulo' => 'sometimes|required|string|max:255',
+                'descripcion' => 'nullable|string',
+                'usuario_asignado_id' => 'sometimes|required|exists:users,id',
+                'tipo' => 'sometimes|required|in:' . implode(',', Tarea::TIPOS_TAREA),
+                'prioridad' => 'sometimes|required|in:' . implode(',', Tarea::PRIORIDADES_TAREA),
+                'estado' => 'sometimes|required|in:' . implode(',', Tarea::ESTADOS_TAREA),
+                'fecha_vencimiento' => 'sometimes|required|date',
+                'hora_estimada' => 'nullable|date_format:H:i',
+                'duracion_estimada_minutos' => 'nullable|integer|min:1|max:1440',
+                'cliente_id' => 'nullable|exists:clientes,id',
+                'cotizacion_id' => 'nullable|exists:cotizaciones,id',
+                'seguimiento_id' => 'nullable|exists:seguimientos,id',
+                'notas' => 'nullable|string',
+                'resultado' => 'nullable|string',
+                'metadatos' => 'nullable|array'
+            ]);
 
-            // Completar tarea
-            $tarea->completar($request->resultado, Auth::id());
-
-            // Actualizar hora de fin si se proporciona
-            if ($request->hora_fin) {
-                $tarea->update(['hora_fin' => $request->hora_fin]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
             }
 
-            // Agregar notas adicionales
-            if ($request->notas_adicionales) {
-                $notasActuales = $tarea->notas ?? '';
-                $tarea->update([
-                    'notas' => $notasActuales . "\n[COMPLETADA - " . Carbon::now()->format('d/m/Y H:i') . "] " . $request->notas_adicionales
+            $data = $validator->validated();
+
+            // Si se está marcando como completada, establecer fecha de completado
+            if (isset($data['estado']) && $data['estado'] === 'completada' && $tarea->estado !== 'completada') {
+                $data['fecha_completada'] = Carbon::now();
+            }
+
+            $tarea->update($data);
+            $tarea->load(['usuarioAsignado', 'usuarioCreador', 'cliente', 'cotizacion', 'seguimiento']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $tarea,
+                'message' => 'Tarea actualizada exitosamente'
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la tarea: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API: Eliminar tarea
+     */
+    public function destroy(Tarea $tarea): JsonResponse
+    {
+        try {
+            $tarea->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tarea eliminada exitosamente'
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar la tarea: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API: Completar tarea rápidamente
+     */
+    public function completarTarea(Request $request, Tarea $tarea): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'resultado' => 'nullable|string|max:1000'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $resultado = $request->input('resultado');
+            $success = $tarea->marcarComoCompletada($resultado);
+
+            if ($success) {
+                $tarea->load(['usuarioAsignado', 'usuarioCreador', 'cliente', 'cotizacion', 'seguimiento']);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $tarea,
+                    'message' => 'Tarea completada exitosamente'
                 ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al completar la tarea'
+                ], 500);
             }
 
-            DB::commit();
-
-            Log::info("Tarea completada: {$tarea->titulo} por " . Auth::user()->name);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Tarea completada exitosamente.',
-                'tarea' => $tarea->fresh(['cliente', 'seguimiento', 'cotizacion'])
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Error al completar tarea {$tarea->id}: " . $e->getMessage());
-            
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno al completar la tarea.'
+                'message' => 'Error al completar la tarea: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Posponer tarea a nueva fecha
-     * Permite reagendar tareas con motivo
+     * API: Posponer tarea
      */
-    public function posponerTarea(Request $request, Tarea $tarea)
+    public function posponerTarea(Request $request, Tarea $tarea): JsonResponse
     {
-        // Verificar permisos
-        if ($tarea->usuario_id !== Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No tienes permisos para posponer esta tarea.'
-            ], 403);
-        }
-
-        if (in_array($tarea->estado, ['completada', 'cancelada'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se puede posponer una tarea completada o cancelada.'
-            ], 422);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'nueva_fecha' => 'required|date|after:today',
-            'motivo' => 'required|string|max:255',
-            'nueva_hora_inicio' => 'nullable|date_format:H:i'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            // Posponer tarea
-            $tarea->posponer($request->nueva_fecha, $request->motivo);
-
-            // Actualizar hora de inicio si se proporciona
-            if ($request->nueva_hora_inicio) {
-                $tarea->update(['hora_inicio' => $request->nueva_hora_inicio]);
-            }
-
-            Log::info("Tarea pospuesta: {$tarea->titulo} para {$request->nueva_fecha}");
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Tarea pospuesta exitosamente.',
-                'tarea' => $tarea->fresh(['cliente', 'seguimiento', 'cotizacion'])
+            $validator = Validator::make($request->all(), [
+                'nueva_fecha' => 'required|date|after:today',
+                'motivo' => 'nullable|string|max:255'
             ]);
 
-        } catch (\Exception $e) {
-            Log::error("Error al posponer tarea {$tarea->id}: " . $e->getMessage());
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $nuevaFecha = $request->input('nueva_fecha');
+            $motivo = $request->input('motivo');
             
+            $success = $tarea->posponer($nuevaFecha, $motivo);
+
+            if ($success) {
+                $tarea->load(['usuarioAsignado', 'usuarioCreador', 'cliente', 'cotizacion', 'seguimiento']);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $tarea,
+                    'message' => 'Tarea pospuesta exitosamente'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al posponer la tarea'
+                ], 500);
+            }
+
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno al posponer la tarea.'
+                'message' => 'Error al posponer la tarea: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Distribución automática de seguimientos vencidos
-     * Sistema inteligente de distribución de carga de trabajo
+     * API: Distribución automática de seguimientos vencidos
      */
-    public function distribuirSeguimientosVencidos(Request $request)
+    public function distribuirSeguimientosVencidos(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'vendedor_id' => 'nullable|exists:users,id',
-            'max_tareas_por_dia' => 'required|integer|min:1|max:20',
-            'dias_distribucion' => 'required|integer|min:1|max:30',
-            'priorizar_por' => 'required|in:fecha_vencimiento,valor_cotizacion,tipo_cliente',
-            'incluir_fin_semana' => 'boolean'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            DB::beginTransaction();
+            $validator = Validator::make($request->all(), [
+                'usuario_asignado_id' => 'required|exists:users,id',
+                'tareas_por_dia' => 'required|integer|min:1|max:50',
+                'dias_habiles' => 'required|integer|min:1|max:30'
+            ]);
 
-            $vendedorId = $request->vendedor_id ?? Auth::id();
-            $maxTareasPorDia = $request->max_tareas_por_dia;
-            $diasDistribucion = $request->dias_distribucion;
-            $priorizarPor = $request->priorizar_por;
-            $incluirFinSemana = $request->boolean('incluir_fin_semana');
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
 
-            // Obtener seguimientos vencidos del vendedor
-            $seguimientosVencidos = Seguimiento::with(['cliente', 'cotizacion'])
-                ->where('vendedor_id', $vendedorId)
-                ->where('proxima_gestion', '<', Carbon::today())
+            $usuarioId = $request->input('usuario_asignado_id');
+            $tareasPorDia = $request->input('tareas_por_dia');
+            $diasHabiles = $request->input('dias_habiles');
+
+            // TODO: Verificar permisos cuando se implemente el sistema de roles
+            // Solo Jefe de Ventas puede distribuir tareas masivamente
+
+            // Obtener seguimientos vencidos sin tarea asignada
+            $seguimientosVencidos = Seguimiento::where('proxima_gestion', '<', Carbon::today())
                 ->whereIn('estado', ['pendiente', 'en_proceso'])
+                ->whereDoesntHave('tareas')
+                ->limit($tareasPorDia * $diasHabiles)
                 ->get();
 
             if ($seguimientosVencidos->isEmpty()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'No hay seguimientos vencidos para distribuir.',
-                    'tareas_creadas' => 0
+                    'message' => 'No hay seguimientos vencidos para distribuir',
+                    'data' => ['tareas_creadas' => 0]
                 ]);
             }
 
-            // Priorizar seguimientos según criterio
-            $seguimientosOrdenados = $this->priorizarSeguimientos($seguimientosVencidos, $priorizarPor);
-
-            // Generar fechas de distribución
-            $fechasDistribucion = $this->generarFechasDistribucion($diasDistribucion, $incluirFinSemana);
-
-            // Distribuir seguimientos
             $tareasCreadas = 0;
-            $fechaIndex = 0;
-            $tareasEnFechaActual = 0;
+            $fechaActual = Carbon::today();
 
-            foreach ($seguimientosOrdenados as $seguimiento) {
-                // Cambiar a siguiente fecha si se alcanzó el máximo
-                if ($tareasEnFechaActual >= $maxTareasPorDia) {
-                    $fechaIndex++;
-                    $tareasEnFechaActual = 0;
+            // Distribuir seguimientos en días hábiles
+            foreach ($seguimientosVencidos->chunk($tareasPorDia) as $chunkIndex => $chunk) {
+                $fechaTarea = $fechaActual->copy()->addDays($chunkIndex);
+                
+                // Saltar fines de semana
+                while ($fechaTarea->isWeekend()) {
+                    $fechaTarea->addDay();
                 }
 
-                // Si no hay más fechas disponibles, parar
-                if ($fechaIndex >= count($fechasDistribucion)) {
-                    break;
+                foreach ($chunk as $seguimiento) {
+                    Tarea::create([
+                        'titulo' => "Seguimiento: {$seguimiento->cliente->nombre_institucion}",
+                        'descripcion' => "Seguimiento vencido desde {$seguimiento->proxima_gestion->format('d/m/Y')}",
+                        'usuario_asignado_id' => $usuarioId,
+                        'usuario_creador_id' => $usuarioId, // TODO: auth()->id() cuando se implemente
+                        'tipo' => 'seguimiento',
+                        'origen' => 'distribucion_automatica',
+                        'seguimiento_id' => $seguimiento->id,
+                        'cliente_id' => $seguimiento->cliente_id,
+                        'fecha_vencimiento' => $fechaTarea,
+                        'prioridad' => 'alta',
+                        'es_distribuida_automaticamente' => true,
+                        'metadatos' => [
+                            'distribucion_automatica' => true,
+                            'fecha_distribucion' => Carbon::now(),
+                            'seguimiento_vencido_desde' => $seguimiento->proxima_gestion
+                        ]
+                    ]);
+
+                    $tareasCreadas++;
                 }
-
-                $fechaTarea = $fechasDistribucion[$fechaIndex];
-
-                // Crear tarea automática
-                $tarea = Tarea::create([
-                    'titulo' => "Seguimiento: {$seguimiento->cliente->nombre_institucion}",
-                    'descripcion' => $this->generarDescripcionSeguimiento($seguimiento),
-                    'usuario_id' => $vendedorId,
-                    'tipo' => 'seguimiento',
-                    'origen' => 'distribucion_masiva',
-                    'seguimiento_id' => $seguimiento->id,
-                    'cotizacion_id' => $seguimiento->cotizacion_id,
-                    'cliente_id' => $seguimiento->cliente_id,
-                    'fecha_tarea' => $fechaTarea,
-                    'duracion_estimada' => 30, // 30 minutos por defecto
-                    'estado' => 'pendiente',
-                    'prioridad' => $this->determinarPrioridadTarea($seguimiento),
-                    'es_distribuida_automaticamente' => true,
-                    'metadata_distribucion' => json_encode([
-                        'algoritmo' => 'distribucion_masiva',
-                        'criterio_priorizacion' => $priorizarPor,
-                        'fecha_distribucion' => now(),
-                        'max_tareas_dia' => $maxTareasPorDia
-                    ])
-                ]);
-
-                // Actualizar seguimiento
-                $seguimiento->update([
-                    'estado' => 'en_proceso',
-                    'proxima_gestion' => $fechaTarea
-                ]);
-
-                $tareasCreadas++;
-                $tareasEnFechaActual++;
             }
-
-            DB::commit();
-
-            Log::info("Distribución masiva completada: {$tareasCreadas} tareas creadas para usuario {$vendedorId}");
 
             return response()->json([
                 'success' => true,
-                'message' => "Distribución completada exitosamente. Se crearon {$tareasCreadas} tareas.",
-                'tareas_creadas' => $tareasCreadas,
-                'seguimientos_procesados' => $seguimientosVencidos->count(),
-                'fechas_utilizadas' => min($fechaIndex + 1, count($fechasDistribucion))
+                'message' => "Se distribuyeron {$tareasCreadas} tareas de seguimiento exitosamente",
+                'data' => [
+                    'tareas_creadas' => $tareasCreadas,
+                    'seguimientos_procesados' => $seguimientosVencidos->count()
+                ]
             ]);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error en distribución masiva: ' . $e->getMessage());
-            
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno en la distribución automática.'
+                'message' => 'Error al distribuir seguimientos: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * API: Obtener tareas para calendario/agenda
-     * Endpoint optimizado para componentes de frontend
+     * API: Obtener datos para formularios (usuarios, clientes, etc.)
      */
-    public function obtenerTareas(Request $request)
+    public function obtenerDatosFormulario(): JsonResponse
     {
-        $usuario = Auth::user();
-        $fechaInicio = $request->get('fecha_inicio');
-        $fechaFin = $request->get('fecha_fin');
-        $estado = $request->get('estado');
-        $tipo = $request->get('tipo');
-
         try {
-            $query = Tarea::with(['cliente:id,nombre_institucion', 'seguimiento:id,estado', 'cotizacion:id,codigo,nombre_cotizacion'])
-                ->deUsuario($usuario->id);
-
-            if ($fechaInicio && $fechaFin) {
-                $query->entreFechas($fechaInicio, $fechaFin);
-            } elseif ($fechaInicio) {
-                $query->whereDate('fecha_tarea', '>=', $fechaInicio);
-            } elseif ($fechaFin) {
-                $query->whereDate('fecha_tarea', '<=', $fechaFin);
-            }
-
-            if ($estado) {
-                $query->where('estado', $estado);
-            }
-
-            if ($tipo) {
-                $query->where('tipo', $tipo);
-            }
-
-            $tareas = $query->orderBy('fecha_tarea')
-                          ->orderBy('hora_inicio')
-                          ->get()
-                          ->map(function($tarea) {
-                              return [
-                                  'id' => $tarea->id,
-                                  'titulo' => $tarea->titulo,
-                                  'descripcion' => $tarea->descripcion,
-                                  'fecha_tarea' => $tarea->fecha_tarea->format('Y-m-d'),
-                                  'hora_inicio' => $tarea->hora_inicio,
-                                  'hora_fin' => $tarea->hora_fin,
-                                  'duracion_estimada' => $tarea->duracion_estimada,
-                                  'duracion_formateada' => $tarea->duracion_formateada,
-                                  'estado' => $tarea->estado,
-                                  'estado_humano' => $tarea->estado_humano,
-                                  'prioridad' => $tarea->prioridad,
-                                  'prioridad_humana' => $tarea->prioridad_humana,
-                                  'tipo' => $tarea->tipo,
-                                  'tipo_humano' => $tarea->tipo_humano,
-                                  'color_estado' => $tarea->color_estado,
-                                  'color_prioridad' => $tarea->color_prioridad,
-                                  'es_vencida' => $tarea->es_vencida,
-                                  'es_hoy' => $tarea->es_hoy,
-                                  'dias_restantes' => $tarea->dias_restantes,
-                                  'cliente' => $tarea->cliente ? [
-                                      'id' => $tarea->cliente->id,
-                                      'nombre' => $tarea->cliente->nombre_institucion
-                                  ] : null,
-                                  'cotizacion' => $tarea->cotizacion ? [
-                                      'id' => $tarea->cotizacion->id,
-                                      'codigo' => $tarea->cotizacion->codigo,
-                                      'nombre' => $tarea->cotizacion->nombre_cotizacion
-                                  ] : null,
-                                  'es_automatica' => $tarea->es_distribuida_automaticamente,
-                                  'puede_editar' => $tarea->puedeSerEditada(),
-                                  'puede_eliminar' => $tarea->puedeSerEliminada(),
-                                  'resumen' => $tarea->resumen
-                              ];
-                          });
+            $data = [
+                'usuarios' => User::select('id', 'name', 'email')->get(),
+                'clientes' => Cliente::select('id', 'nombre_institucion', 'rut')->get(),
+                'tipos_tarea' => Tarea::TIPOS_TAREA,
+                'prioridades' => Tarea::PRIORIDADES_TAREA,
+                'estados' => Tarea::ESTADOS_TAREA
+            ];
 
             return response()->json([
                 'success' => true,
-                'tareas' => $tareas,
-                'total' => $tareas->count()
+                'data' => $data,
+                'message' => 'Datos obtenidos exitosamente'
             ]);
 
-        } catch (\Exception $e) {
-            Log::error('Error al obtener tareas: ' . $e->getMessage());
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al cargar las tareas.'
+                'message' => 'Error al obtener datos: ' . $e->getMessage()
             ], 500);
         }
     }
 
-    /**
-     * Métodos auxiliares privados
-     */
 
-    private function obtenerCargaSemana($usuarioId, $fecha)
-    {
-        $inicioSemana = $fecha->copy()->startOfWeek();
-        $finSemana = $fecha->copy()->endOfWeek();
-
-        return Tarea::deUsuario($usuarioId)
-            ->entreFechas($inicioSemana, $finSemana)
-            ->selectRaw('
-                DATE(fecha_tarea) as fecha,
-                COUNT(*) as total_tareas,
-                SUM(duracion_estimada) as tiempo_total,
-                SUM(CASE WHEN estado = "completada" THEN 1 ELSE 0 END) as completadas
-            ')
-            ->groupBy('fecha')
-            ->get()
-            ->keyBy('fecha');
-    }
-
-    private function obtenerProximasTareas($usuarioId, $fecha)
-    {
-        $proximoDiaLaboral = $fecha->copy()->addWeekday();
+/**
+ * API: Análisis inteligente de carga de trabajo
+ */
+public function analizarCargaTrabajo(Request $request): JsonResponse
+{
+    try {
+        $usuarioId = $request->get('usuario_id', 1); // TODO: auth()->id()
+        $semana = $request->get('semana', 'actual'); // 'actual', 'siguiente'
         
-        return Tarea::with(['cliente', 'cotizacion'])
-            ->deUsuario($usuarioId)
-            ->whereDate('fecha_tarea', $proximoDiaLaboral)
+        // Calcular fechas de análisis (próximos 7 días)
+        $fechaInicio = Carbon::now();
+        $fechaFin = $fechaInicio->copy()->addDays(6);
+        
+       // Obtener tareas agrupadas por día
+        $tareas = Tarea::where('usuario_asignado_id', $usuarioId)
+            ->whereBetween('fecha_vencimiento', [$fechaInicio->format('Y-m-d'), $fechaFin->format('Y-m-d')])
             ->whereIn('estado', ['pendiente', 'en_progreso'])
-            ->orderBy('prioridad', 'desc')
-            ->orderBy('hora_inicio')
-            ->limit(5)
-            ->get();
-    }
+            ->get()
+            ->groupBy(function($tarea) {
+                return $tarea->fecha_vencimiento->format('Y-m-d');
+            });
 
-    private function generarAlertas($usuarioId, $fecha)
-    {
+        // 🔍 DEBUG TEMPORAL - AGREGAR ESTAS LÍNEAS:
+        \Log::info('🧠 ANÁLISIS DEBUG:', [
+            'usuario_id' => $usuarioId,
+            'fecha_inicio' => $fechaInicio->format('Y-m-d'),
+            'fecha_fin' => $fechaFin->format('Y-m-d'),
+            'total_tareas_encontradas' => Tarea::where('usuario_asignado_id', $usuarioId)
+                ->whereBetween('fecha_vencimiento', [$fechaInicio->format('Y-m-d'), $fechaFin->format('Y-m-d')])
+                ->count(),
+            'tareas_por_fecha' => $tareas->map(fn($grupo) => $grupo->count()),
+            'todas_las_fechas_de_tareas' => Tarea::where('usuario_asignado_id', $usuarioId)
+                ->pluck('fecha_vencimiento', 'titulo')->toArray()
+        ]);
+        $analisis = [];
         $alertas = [];
-
-        // Alertas de sobrecarga
-        $cargaHoy = Tarea::deUsuario($usuarioId)
-            ->hoy()
-            ->sum('duracion_estimada');
-
-        if ($cargaHoy > 480) { // Más de 8 horas
-            $alertas[] = [
-                'tipo' => 'warning',
-                'titulo' => 'Sobrecarga de trabajo',
-                'mensaje' => 'Tienes más de 8 horas de tareas programadas para hoy.',
-                'accion' => 'redistribuir'
-            ];
-        }
-
-        // Alertas de tareas vencidas
-        $tareasVencidas = Tarea::deUsuario($usuarioId)
-            ->vencidas()
-            ->count();
-
-        if ($tareasVencidas > 0) {
-            $alertas[] = [
-                'tipo' => 'error',
-                'titulo' => 'Tareas vencidas',
-                'mensaje' => "Tienes {$tareasVencidas} tarea(s) vencida(s).",
-                'accion' => 'revisar_vencidas'
-            ];
-        }
-
-        // Alertas de seguimientos sin gestionar
-        $seguimientosVencidos = Seguimiento::where('vendedor_id', $usuarioId)
-            ->where('proxima_gestion', '<', Carbon::today())
-            ->whereIn('estado', ['pendiente', 'en_proceso'])
-            ->count();
-
-        if ($seguimientosVencidos > 5) {
-            $alertas[] = [
-                'tipo' => 'info',
-                'titulo' => 'Seguimientos pendientes',
-                'mensaje' => "Tienes {$seguimientosVencidos} seguimientos vencidos que pueden convertirse en tareas.",
-                'accion' => 'distribuir_seguimientos'
-            ];
-        }
-
-        return $alertas;
-    }
-
-    private function priorizarSeguimientos($seguimientos, $criterio)
-    {
-        switch ($criterio) {
-            case 'fecha_vencimiento':
-                return $seguimientos->sortBy('proxima_gestion');
+        $sugerencias = [];
+        
+        // Analizar cada día
+        for ($i = 0; $i < 7; $i++) {
+            $fecha = $fechaInicio->copy()->addDays($i);
+            $fechaStr = $fecha->format('Y-m-d');
+            $cantidadTareas = $tareas->get($fechaStr, collect())->count();
             
-            case 'valor_cotizacion':
-                return $seguimientos->sortByDesc(function($seg) {
-                    return $seg->cotizacion ? $seg->cotizacion->total_con_iva : 0;
-                });
-            
-            case 'tipo_cliente':
-                return $seguimientos->sortBy(function($seg) {
-                    $orden = ['Cliente Público' => 1, 'Revendedor' => 2, 'Cliente Privado' => 3];
-                    return $orden[$seg->cliente->tipo_cliente] ?? 4;
-                });
-            
-            default:
-                return $seguimientos;
-        }
-    }
-
-    private function generarFechasDistribucion($dias, $incluirFinSemana)
-    {
-        $fechas = [];
-        $fecha = Carbon::tomorrow();
-
-        while (count($fechas) < $dias) {
-            if ($incluirFinSemana || !$fecha->isWeekend()) {
-                $fechas[] = $fecha->copy();
+            // Determinar nivel de carga
+            $nivelCarga = 'normal';
+            if ($cantidadTareas >= 10) {
+                $nivelCarga = 'sobrecarga';
+            } elseif ($cantidadTareas >= 7) {
+                $nivelCarga = 'alta';
             }
-            $fecha->addDay();
+            
+            $analisis[$fechaStr] = [
+                'fecha' => $fechaStr,
+                'dia_nombre' => $fecha->translatedFormat('l'),
+                'cantidad_tareas' => $cantidadTareas,
+                'nivel_carga' => $nivelCarga,
+                'es_hoy' => $fecha->isToday(),
+                'es_manana' => $fecha->isTomorrow()
+            ];
+            
+            // Generar alertas para sobrecarga
+            if ($nivelCarga === 'sobrecarga') {
+                $alertas[] = [
+                    'tipo' => 'sobrecarga',
+                    'mensaje' => $fecha->isToday() ? 
+                        "¡Hoy tienes {$cantidadTareas} tareas! Muy sobrecargado." :
+                        ($fecha->isTomorrow() ? 
+                            "Mañana tienes {$cantidadTareas} tareas. ¡Atención!" :
+                            "{$fecha->translatedFormat('l')} tienes {$cantidadTareas} tareas."
+                        ),
+                    'fecha' => $fechaStr,
+                    'prioridad' => $fecha->isToday() ? 'urgente' : ($fecha->isTomorrow() ? 'alta' : 'media')
+                ];
+            }
         }
-
-        return $fechas;
-    }
-
-    private function generarDescripcionSeguimiento($seguimiento)
-    {
-        $descripcion = "Realizar seguimiento a {$seguimiento->cliente->nombre_institucion}.";
         
-        if ($seguimiento->cotizacion) {
-            $descripcion .= " Cotización: {$seguimiento->cotizacion->nombre_cotizacion}.";
+        // Generar sugerencias de redistribución
+        if (!empty($alertas)) {
+            $sugerencias = $this->generarSugerenciasRedistribucion($analisis, $tareas);
         }
-
-        if ($seguimiento->ultima_gestion) {
-            $descripcion .= " Última gestión: {$seguimiento->ultima_gestion}.";
-        }
-
-        if ($seguimiento->notas) {
-            $descripcion .= " Notas: " . Str::limit($seguimiento->notas, 100);
-        }
-
-        return $descripcion;
-    }
-
-    private function determinarPrioridadTarea($seguimiento)
-    {
-        $diasVencidos = Carbon::now()->diffInDays($seguimiento->proxima_gestion);
         
-        if ($diasVencidos > 7) return 'urgente';
-        if ($diasVencidos > 3) return 'alta';
-        if ($diasVencidos > 1) return 'media';
-        return 'baja';
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'analisis_semanal' => $analisis,
+                'alertas' => $alertas,
+                'sugerencias' => $sugerencias,
+                'resumen' => [
+                    'dias_sobrecargados' => count(array_filter($analisis, fn($dia) => $dia['nivel_carga'] === 'sobrecarga')),
+                    'dias_alta_carga' => count(array_filter($analisis, fn($dia) => $dia['nivel_carga'] === 'alta')),
+                    'total_tareas_semana' => array_sum(array_column($analisis, 'cantidad_tareas'))
+                ]
+            ],
+            'message' => 'Análisis de carga completado'
+        ]);
+        
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error en análisis: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+/**
+ * Generar sugerencias inteligentes de redistribución
+ */
+private function generarSugerenciasRedistribucion($analisis, $tareas): array
+{
+    $sugerencias = [];
+    
+    // Encontrar días sobrecargados y días con poca carga
+    $diasSobrecargados = array_filter($analisis, fn($dia) => $dia['nivel_carga'] === 'sobrecarga');
+    $diasLibres = array_filter($analisis, fn($dia) => $dia['cantidad_tareas'] <= 4);
+    
+    foreach ($diasSobrecargados as $diaSobrecargado) {
+        $tareasDelDia = $tareas->get($diaSobrecargado['fecha'], collect());
+        $tareasMovibles = $tareasDelDia->where('prioridad', '!=', 'urgente')->take(4);
+        
+        if ($tareasMovibles->count() > 0 && !empty($diasLibres)) {
+            $diaDestino = array_values($diasLibres)[0]; // Primer día libre
+            
+            $sugerencias[] = [
+                'tipo' => 'redistribucion',
+                'dia_origen' => $diaSobrecargado['fecha'],
+                'dia_destino' => $diaDestino['fecha'],
+                'tareas_a_mover' => $tareasMovibles->pluck('id')->toArray(),
+                'cantidad_tareas' => $tareasMovibles->count(),
+                'beneficio' => "Reducir sobrecarga del {$diaSobrecargado['dia_nombre']} moviendo {$tareasMovibles->count()} tareas al {$diaDestino['dia_nombre']}",
+                'impacto' => [
+                    'origen_antes' => $diaSobrecargado['cantidad_tareas'],
+                    'origen_despues' => $diaSobrecargado['cantidad_tareas'] - $tareasMovibles->count(),
+                    'destino_antes' => $diaDestino['cantidad_tareas'],
+                    'destino_despues' => $diaDestino['cantidad_tareas'] + $tareasMovibles->count()
+                ]
+            ];
+        }
+    }
+    
+    return $sugerencias;
+}
 }

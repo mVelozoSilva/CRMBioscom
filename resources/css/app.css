@@ -143,6 +143,55 @@ body {
     .btn-close:hover {
         opacity: 0.75;
     }
+    /* === ESTILOS DE ACCESIBILIDAD === */
+
+/* 🌗 Modo alto contraste */
+.modo-contraste {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+.modo-contraste a,
+.modo-contraste .btn-bioscom-primary,
+.modo-contraste .heading-bioscom-2 {
+  color: #ff0 !important;
+}
+
+/* 📖 Fuente para dislexia */
+.fuente-dislexia {
+  font-family: 'OpenDyslexic', 'Arial', sans-serif !important;
+}
+
+/* 🔠 Tamaño de texto aumentado */
+.texto-grande {
+  font-size: 1.15em;
+}
+
+/* 🚫 Sin animaciones */
+.sin-animaciones * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* 🌙 Modo oscuro accesible */
+.modo-oscuro body,
+.modo-oscuro #app {
+  background-color: #121212 !important;
+  color: #e6e6e6 !important;
+}
+
+.modo-oscuro .card-bioscom {
+  background-color: #1e1e1e !important;
+  border-color: #444 !important;
+  color: #e6e6e6 !important;
+}
+
+.modo-oscuro .btn-bioscom-primary {
+  background-color: #333 !important;
+  border-color: #666 !important;
+  color: #eee !important;
+}
+
+
     /* Media queries para modales grandes en pantallas md y lg */
     @media (min-width: 576px) { .modal-dialog { max-width: 500px; } }
     @media (min-width: 992px) { .modal-lg, .modal-xl { max-width: 800px; } }

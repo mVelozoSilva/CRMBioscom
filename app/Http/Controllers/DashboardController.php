@@ -11,6 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\Cobranza;
+use App\Models\ServicioTecnico;
+use App\Models\DashboardMetrics;
+use App\Models\DashboardAlertas;
 
 class DashboardController extends Controller
 {

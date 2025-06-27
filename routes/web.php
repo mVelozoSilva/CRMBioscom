@@ -11,6 +11,13 @@ use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\SeguimientoController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\TriajeController;
+use App\Http\Controllers\CobranzaController;
+use App\Http\Controllers\ServicioTecnicoController;
+use App\Http\Controllers\CampaniaController;
+use App\Http\Controllers\ArchivoController;
+use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\FormularioController;
+use App\Http\Controllers\ConfiguracionSupervisorController;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,6 +93,7 @@ Route::middleware(['auth'])->prefix('agenda')->name('agenda.')->group(function (
     Route::put('/tareas/{tarea}', [AgendaController::class, 'actualizar'])->name('tareas.actualizar');
     Route::post('/tareas/{tarea}/completar', [AgendaController::class, 'completarTarea'])->name('tareas.completar');
     Route::post('/tareas/{tarea}/posponer', [AgendaController::class, 'posponerTarea'])->name('tareas.posponer');
+    Route::get('/agenda/mi-semana', [AgendaController::class, 'miSemana'])->name('agenda.mi-semana');
     
     // 🌟 DISTRIBUCIÓN AUTOMÁTICA (funcionalidad estrella)
     Route::post('/distribuir-seguimientos', [AgendaController::class, 'distribuirSeguimientosVencidos'])->name('distribuir');
@@ -159,6 +167,94 @@ Route::post('/logout', function () {
     return redirect('/login')->with('success', '👋 Sesión cerrada correctamente');
 })->name('logout');
 
+// ============================================================================
+// RUTAS PARA MÓDULO DE TAREAS (AGENDA ELECTRÓNICA)
+// ============================================================================
+
+Route::prefix('agenda')->name('agenda.')->group(function () {
+    // Vista principal de la agenda
+    Route::get('/', [AgendaController::class, 'index'])->name('index');
+    
+    // Vista "Mi Día" - Tareas del día actual
+    Route::get('/mi-dia', [AgendaController::class, 'miDia'])->name('mi-dia');
+    
+    // Vista "Mi Semana" - Planificación semanal
+    Route::get('/mi-semana', [AgendaController::class, 'miSemana'])->name('mi-semana');
+    
+    // Acciones rápidas desde las vistas
+    Route::post('/tareas', [AgendaController::class, 'store'])->name('tareas.store');
+    Route::put('/tareas/{tarea}', [AgendaController::class, 'update'])->name('tareas.update');
+    Route::post('/tareas/{tarea}/completar', [AgendaController::class, 'completarTarea'])->name('tareas.completar');
+    Route::post('/tareas/{tarea}/posponer', [AgendaController::class, 'posponerTarea'])->name('tareas.posponer');
+    
+    // Distribución automática de seguimientos (para Jefes de Ventas)
+    Route::post('/distribuir-seguimientos', [AgendaController::class, 'distribuirSeguimientosVencidos'])->name('distribuir-seguimientos');
+});
+
+// ==========================================
+// 💰 MÓDULO DE COBRANZAS
+// ==========================================
+
+
+// Ruta principal del módulo de cobranzas
+Route::get('/cobranzas', function () {
+    return view('cobranzas.index');
+})->name('cobranzas.index');
+
+// Rutas adicionales para vistas específicas (si se necesitan en el futuro)
+Route::prefix('cobranzas')->name('cobranzas.')->group(function () {
+    // Vista de dashboard de cobranzas
+    Route::get('/dashboard', function () {
+        return view('cobranzas.dashboard');
+    })->name('dashboard');
+    
+    // Vista de reportes de cobranzas
+    Route::get('/reportes', function () {
+        return view('cobranzas.reportes');
+    })->name('reportes');
+    
+    // Vista de configuración de cobranzas (para roles administrativos)
+    Route::get('/configuracion', function () {
+        return view('cobranzas.configuracion');
+    })->name('configuracion');
+});
+
+
+//Rutas Accesibilidad //
+Route::get('/accesibilidad', function () {
+    return view('accesibilidad.index');
+});
+
+
+Route::get('/servicio-tecnico', [ServicioTecnicoController::class, 'index']);
+Route::get('/servicio-tecnico/crear', [ServicioTecnicoController::class, 'create']);
+Route::post('/servicio-tecnico', [ServicioTecnicoController::class, 'store']);
+
+Route::get('/campanias', [CampaniaController::class, 'index']);
+Route::get('/campanias/crear', [CampaniaController::class, 'create']);
+Route::post('/campanias', [CampaniaController::class, 'store']);
+
+Route::get('/archivos', [ArchivoController::class, 'index']);
+Route::get('/archivos/crear', [ArchivoController::class, 'create']);
+Route::post('/archivos', [ArchivoController::class, 'store']);
+
+Route::get('/notificaciones', [NotificacionController::class, 'index'])->name('notificaciones.index');
+Route::post('/notificaciones/leer', [NotificacionController::class, 'marcarComoLeidas'])->name('notificaciones.leer');
+Route::post('/notificaciones/limpiar', [NotificacionController::class, 'limpiarNotificaciones'])->name('notificaciones.limpiar');
+
+Route::get('/formularios', [FormularioController::class, 'index']);
+Route::get('/formularios/crear', [FormularioController::class, 'create']);
+Route::post('/formularios', [FormularioController::class, 'store']);
+
+Route::get('/configuracion', [ConfiguracionSupervisorController::class, 'index']);
+Route::get('/configuracion/editar', [ConfiguracionSupervisorController::class, 'edit']);
+Route::post('/configuracion', [ConfiguracionSupervisorController::class, 'update']);
+Route::get('/configuracion/crear', [ConfiguracionSupervisorController::class, 'create'])->name('configuracion.create');
+
+Route::get('/notificaciones', [NotificacionController::class, 'index']);
+Route::get('/notificaciones/crear', [NotificacionController::class, 'create']);
+Route::post('/notificaciones', [NotificacionController::class, 'store']);
+
 // =============================================================================
 // RUTAS FUTURAS (Comentadas para referencia)
 // =============================================================================
@@ -176,11 +272,5 @@ Route::prefix('servicio-tecnico')->name('st.')->group(function () {
     Route::get('/', [ServicioTecnicoController::class, 'index'])->name('index');
     Route::resource('solicitudes', SolicitudSTController::class);
     Route::resource('mantenciones', MantencionController::class);
-});
-
-// 💰 COBRANZAS (Fase 5)
-Route::prefix('cobranzas')->name('cobranzas.')->group(function () {
-    Route::get('/', [CobranzasController::class, 'index'])->name('index');
-    Route::post('/actualizar-masivo', [CobranzasController::class, 'updateMasivo'])->name('update-masivo');
 });
 */

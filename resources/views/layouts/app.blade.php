@@ -16,6 +16,8 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.0/open-dyslexic.min.css">
+
 </head>
 <body class="bg-bioscom-background text-bioscom-text-primary font-sans">
     <div id="app">
@@ -58,24 +60,28 @@
             </div>
         </main>
     </div>
-   <script>
-// Configurar axios cuando esté disponible (después de que Vue lo cargue)
-document.addEventListener('DOMContentLoaded', function() {
-    // Esperar a que axios esté disponible
-    function configurarAxios() {
-        if (typeof axios !== 'undefined') {
-            axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            axios.defaults.headers.common['Accept'] = 'application/json';
-            axios.defaults.headers.common['Content-Type'] = 'application/json';
-            console.log('✅ Axios configurado correctamente');
-        } else {
-            // Reintentar después de 100ms si axios no está disponible
-            setTimeout(configurarAxios, 100);
+
+    <script>
+    // Configurar axios cuando esté disponible (después de que Vue lo cargue)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Esperar a que axios esté disponible
+        function configurarAxios() {
+            if (typeof axios !== 'undefined') {
+                axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                axios.defaults.headers.common['Accept'] = 'application/json';
+                axios.defaults.headers.common['Content-Type'] = 'application/json';
+                console.log('✅ Axios configurado correctamente');
+            } else {
+                // Reintentar después de 100ms si axios no está disponible
+                setTimeout(configurarAxios, 100);
+            }
         }
-    }
-    
-    configurarAxios();
-});
-</script>
-</body>
-</html>
+        
+        configurarAxios();
+    });
+    </script>
+
+    {{-- CRÍTICO: Stack para scripts personalizados de las vistas --}}
+    @stack('scripts')
+    </body>
+    </html>

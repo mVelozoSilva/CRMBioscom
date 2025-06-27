@@ -4,79 +4,49 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
 class Tarea extends Model
 {
-    use HasFactory; // Removemos SoftDeletes por ahora ya que la tabla no tiene deleted_at
+    use HasFactory;
 
     protected $table = 'tareas';
 
     protected $fillable = [
         'titulo',
         'descripcion',
-        'usuario_id',                    // Mantener por compatibilidad
-        'usuario_asignado_id',           // Real en BD
-        'usuario_creador_id',            // Real en BD
+        'usuario_asignado_id',
+        'usuario_creador_id',
         'tipo',
         'origen',
         'seguimiento_id',
         'cotizacion_id',
         'cliente_id',
-        'fecha_vencimiento',             // Real en BD (no fecha_tarea)
-        'hora_estimada',                 // Real en BD (no hora_inicio)
-        'duracion_estimada_minutos',     // Real en BD (no duracion_estimada)
+        'fecha_vencimiento',
+        'hora_estimada',
+        'duracion_estimada_minutos',
         'estado',
         'prioridad',
-        'metadatos',                     // Real en BD (no metadata_distribucion)
+        'metadatos',
         'es_distribuida_automaticamente',
         'notas',
         'resultado',
-        'fecha_completada',              // Real en BD (no completada_en)
+        'fecha_completada'
     ];
 
     protected $casts = [
-        'fecha_vencimiento' => 'date',   // Cambiado de fecha_tarea
+        'metadatos' => 'array',
+        'fecha_vencimiento' => 'date',
         'hora_estimada' => 'datetime:H:i',
+        'fecha_completada' => 'datetime',
         'es_distribuida_automaticamente' => 'boolean',
-        'fecha_completada' => 'datetime', // Cambiado de completada_en
-        'metadatos' => 'array',          // Cambiado de metadata_distribucion
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
-    protected $dates = [
-        'fecha_vencimiento',             // Cambiado
-        'fecha_completada',              // Cambiado
-        'created_at',
-        'updated_at',
-    ];
-
-    /**
-     * Estados válidos para las tareas
-     */
-    const ESTADOS = [
-        'pendiente',
-        'en_progreso',
-        'completada',
-        'cancelada',
-        'pospuesta',
-        'vencida'  // Agregado según BD
-    ];
-
-    /**
-     * Prioridades válidas para las tareas
-     */
-    const PRIORIDADES = [
-        'baja',
-        'media',
-        'alta',
-        'urgente'
-    ];
-
-    /**
-     * Tipos de tareas disponibles
-     */
-    const TIPOS = [
+    // Constantes para validación y consistencia
+    const TIPOS_TAREA = [
         'seguimiento',
         'cotizacion',
         'mantencion',
@@ -89,10 +59,7 @@ class Tarea extends Model
         'personal'
     ];
 
-    /**
-     * Orígenes de las tareas (según BD real)
-     */
-    const ORIGENES = [
+    const ORIGENES_TAREA = [
         'manual',
         'distribucion_masiva',
         'distribucion_automatica',
@@ -101,22 +68,36 @@ class Tarea extends Model
         'distribucion_masiva_fase1a'
     ];
 
-    /**
-     * Relaciones
-     */
+    const ESTADOS_TAREA = [
+        'pendiente',
+        'en_progreso',
+        'completada',
+        'cancelada',
+        'pospuesta',
+        'vencida'
+    ];
 
+    const PRIORIDADES_TAREA = [
+        'baja',
+        'media',
+        'alta',
+        'urgente'
+    ];
+
+    // Relaciones
+    
     /**
      * Usuario asignado a la tarea
      */
-    public function usuario()
+    public function usuarioAsignado(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'usuario_asignado_id'); // Cambiado
+        return $this->belongsTo(User::class, 'usuario_asignado_id');
     }
 
     /**
-     * Usuario creador de la tarea
+     * Usuario que creó la tarea
      */
-    public function usuarioCreador()
+    public function usuarioCreador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'usuario_creador_id');
     }
@@ -124,7 +105,7 @@ class Tarea extends Model
     /**
      * Seguimiento relacionado (si aplica)
      */
-    public function seguimiento()
+    public function seguimiento(): BelongsTo
     {
         return $this->belongsTo(Seguimiento::class, 'seguimiento_id');
     }
@@ -132,7 +113,7 @@ class Tarea extends Model
     /**
      * Cotización relacionada (si aplica)
      */
-    public function cotizacion()
+    public function cotizacion(): BelongsTo
     {
         return $this->belongsTo(Cotizacion::class, 'cotizacion_id');
     }
@@ -140,53 +121,55 @@ class Tarea extends Model
     /**
      * Cliente relacionado (si aplica)
      */
-    public function cliente()
+    public function cliente(): BelongsTo
     {
         return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
+    // Scopes y métodos de consulta
+
     /**
-     * Scopes corregidos
+     * Scope para tareas de hoy
      */
+    public function scopeHoy($query)
+    {
+        return $query->whereDate('fecha_vencimiento', Carbon::today());
+    }
+
+    /**
+     * Scope para tareas de esta semana
+     */
+    public function scopeEstaSemana($query)
+    {
+        return $query->whereBetween('fecha_vencimiento', [
+            Carbon::now()->startOfWeek(),
+            Carbon::now()->endOfWeek()
+        ]);
+    }
 
     /**
      * Scope para tareas pendientes
      */
     public function scopePendientes($query)
     {
-        return $query->where('estado', 'pendiente');
+        return $query->whereIn('estado', ['pendiente', 'en_progreso']);
     }
 
     /**
-     * Scope para tareas en progreso
+     * Scope para tareas vencidas
      */
-    public function scopeEnProgreso($query)
+    public function scopeVencidas($query)
     {
-        return $query->where('estado', 'en_progreso');
+        return $query->where('fecha_vencimiento', '<', Carbon::today())
+                    ->whereIn('estado', ['pendiente', 'en_progreso']);
     }
 
     /**
-     * Scope para tareas completadas
+     * Scope para tareas por usuario
      */
-    public function scopeCompletadas($query)
+    public function scopePorUsuario($query, $usuarioId)
     {
-        return $query->where('estado', 'completada');
-    }
-
-    /**
-     * Scope para tareas de un usuario específico
-     */
-    public function scopeDeUsuario($query, $usuarioId)
-    {
-        return $query->where('usuario_asignado_id', $usuarioId); // Corregido
-    }
-
-    /**
-     * Scope para tareas por tipo
-     */
-    public function scopePorTipo($query, $tipo)
-    {
-        return $query->where('tipo', $tipo);
+        return $query->where('usuario_asignado_id', $usuarioId);
     }
 
     /**
@@ -198,266 +181,123 @@ class Tarea extends Model
     }
 
     /**
-     * Scope para tareas de hoy
+     * Scope para tareas por tipo
      */
-    public function scopeHoy($query)
+    public function scopePorTipo($query, $tipo)
     {
-        return $query->whereDate('fecha_vencimiento', Carbon::today()); // Corregido
+        return $query->where('tipo', $tipo);
+    }
+
+    // Métodos auxiliares
+
+    /**
+     * Determina si la tarea está vencida
+     */
+    public function getEsVencidaAttribute(): bool
+    {
+        return $this->fecha_vencimiento < Carbon::today() && 
+               in_array($this->estado, ['pendiente', 'en_progreso']);
     }
 
     /**
-     * Scope para tareas de esta semana
+     * Determina si la tarea es para hoy
      */
-    public function scopeEstaSemana($query)
+    public function getEsHoyAttribute(): bool
     {
-        return $query->whereBetween('fecha_vencimiento', [ // Corregido
-            Carbon::now()->startOfWeek(),
-            Carbon::now()->endOfWeek()
-        ]);
+        return $this->fecha_vencimiento->isToday();
     }
 
     /**
-     * Scope para tareas vencidas
+     * Determina si la tarea es para mañana
      */
-    public function scopeVencidas($query)
+    public function getEsMananaAttribute(): bool
     {
-        return $query->where('fecha_vencimiento', '<', Carbon::today()) // Corregido
-                    ->whereIn('estado', ['pendiente', 'en_progreso']);
+        return $this->fecha_vencimiento->isTomorrow();
     }
 
     /**
-     * Scope para tareas próximas (siguiente X días)
+     * Obtiene el color CSS según la prioridad para el diseño Bioscom
      */
-    public function scopeProximas($query, $dias = 7)
+    public function getColorPrioridadAttribute(): string
     {
-        return $query->whereBetween('fecha_vencimiento', [ // Corregido
-            Carbon::today(),
-            Carbon::today()->addDays($dias)
-        ]);
+        return match($this->prioridad) {
+            'urgente' => 'text-red-600 bg-red-50 border-red-200',
+            'alta' => 'text-orange-600 bg-orange-50 border-orange-200',
+            'media' => 'text-blue-600 bg-blue-50 border-blue-200',
+            'baja' => 'text-gray-600 bg-gray-50 border-gray-200',
+            default => 'text-gray-600 bg-gray-50 border-gray-200'
+        };
     }
 
     /**
-     * Scope para tareas por rango de fechas
+     * Obtiene el color CSS según el estado para el diseño Bioscom
      */
-    public function scopeEntreFechas($query, $fechaInicio, $fechaFin)
+    public function getColorEstadoAttribute(): string
     {
-        return $query->whereBetween('fecha_vencimiento', [$fechaInicio, $fechaFin]); // Corregido
+        return match($this->estado) {
+            'completada' => 'text-green-600 bg-green-50 border-green-200',
+            'en_progreso' => 'text-blue-600 bg-blue-50 border-blue-200',
+            'pendiente' => 'text-yellow-600 bg-yellow-50 border-yellow-200',
+            'vencida' => 'text-red-600 bg-red-50 border-red-200',
+            'pospuesta' => 'text-gray-600 bg-gray-50 border-gray-200',
+            'cancelada' => 'text-red-600 bg-red-50 border-red-200',
+            default => 'text-gray-600 bg-gray-50 border-gray-200'
+        };
     }
 
     /**
-     * Scope para tareas automáticas
+     * Obtiene una descripción amigable del tipo de tarea
      */
-    public function scopeAutomaticas($query)
+    public function getTipoDescripcionAttribute(): string
     {
-        return $query->where('es_distribuida_automaticamente', true);
+        return match($this->tipo) {
+            'seguimiento' => 'Seguimiento',
+            'cotizacion' => 'Cotización',
+            'mantencion' => 'Mantención',
+            'cobranza' => 'Cobranza',
+            'reunion' => 'Reunión',
+            'llamada' => 'Llamada',
+            'email' => 'Email',
+            'visita' => 'Visita',
+            'administrativa' => 'Administrativa',
+            'personal' => 'Personal',
+            default => ucfirst($this->tipo)
+        };
     }
-
-    /**
-     * Scope para tareas manuales
-     */
-    public function scopeManuales($query)
-    {
-        return $query->where('es_distribuida_automaticamente', false);
-    }
-
-    /**
-     * Accessors corregidos
-     */
-
-    /**
-     * Accessor para obtener el color según el estado
-     */
-    public function getColorEstadoAttribute()
-    {
-        $colores = [
-            'pendiente' => 'yellow',
-            'en_progreso' => 'blue',
-            'completada' => 'green',
-            'cancelada' => 'red',
-            'pospuesta' => 'gray',
-            'vencida' => 'red'
-        ];
-
-        return $colores[$this->estado] ?? 'gray';
-    }
-
-    /**
-     * Accessor para obtener el color según la prioridad
-     */
-    public function getColorPrioridadAttribute()
-    {
-        $colores = [
-            'baja' => 'green',
-            'media' => 'yellow',
-            'alta' => 'orange',
-            'urgente' => 'red'
-        ];
-
-        return $colores[$this->prioridad] ?? 'gray';
-    }
-
-    /**
-     * Accessor para determinar si la tarea está vencida
-     */
-    public function getEsVencidaAttribute()
-    {
-        if (in_array($this->estado, ['completada', 'cancelada'])) {
-            return false;
-        }
-
-        return $this->fecha_vencimiento < Carbon::today(); // Corregido
-    }
-
-    /**
-     * Accessor para determinar si la tarea es de hoy
-     */
-    public function getEsHoyAttribute()
-    {
-        return $this->fecha_vencimiento->isToday(); // Corregido
-    }
-
-    /**
-     * Accessor para obtener días restantes/vencidos
-     */
-    public function getDiasRestantesAttribute()
-    {
-        if (in_array($this->estado, ['completada', 'cancelada'])) {
-            return null;
-        }
-
-        $hoy = Carbon::today();
-        $fechaTarea = $this->fecha_vencimiento; // Corregido
-
-        if ($fechaTarea->isToday()) {
-            return 0;
-        } elseif ($fechaTarea->isPast()) {
-            return -$hoy->diffInDays($fechaTarea);
-        } else {
-            return $hoy->diffInDays($fechaTarea);
-        }
-    }
-
-    /**
-     * Accessor para obtener duración formateada
-     */
-    public function getDuracionFormateadaAttribute()
-    {
-        if (!$this->duracion_estimada_minutos) { // Corregido nombre de columna
-            return null;
-        }
-
-        $horas = intval($this->duracion_estimada_minutos / 60);
-        $minutos = $this->duracion_estimada_minutos % 60;
-
-        if ($horas > 0) {
-            return $horas . 'h ' . ($minutos > 0 ? $minutos . 'm' : '');
-        }
-
-        return $minutos . 'm';
-    }
-
-    /**
-     * Métodos de negocio corregidos
-     */
 
     /**
      * Marcar tarea como completada
      */
-    public function completar($resultado = null, $usuarioId = null)
+    public function marcarComoCompletada($resultado = null): bool
     {
-        $this->update([
-            'estado' => 'completada',
-            'fecha_completada' => Carbon::now(), // Corregido
-            'resultado' => $resultado,
-        ]);
-
-        // Actualizar seguimiento relacionado si existe
-        if ($this->seguimiento_id && $this->tipo === 'seguimiento') {
-            $this->seguimiento()->update([
-                'estado' => 'completado',
-                'ultima_gestion' => Carbon::today(),
-                'resultado_ultima_gestion' => $resultado
-            ]);
+        $this->estado = 'completada';
+        $this->fecha_completada = Carbon::now();
+        if ($resultado) {
+            $this->resultado = $resultado;
         }
-
-        return $this;
+        return $this->save();
     }
 
     /**
      * Posponer tarea a una nueva fecha
      */
-    public function posponer($nuevaFecha, $motivo = null)
+    public function posponer($nuevaFecha, $motivo = null): bool
     {
-        $fechaAnterior = $this->fecha_vencimiento; // Corregido
+        $this->fecha_vencimiento = Carbon::parse($nuevaFecha);
+        $this->estado = 'pospuesta';
         
-        $this->update([
-            'fecha_vencimiento' => $nuevaFecha, // Corregido
-            'estado' => 'pospuesta',
-            'notas' => $this->notas . "\n[" . Carbon::now()->format('d/m/Y H:i') . "] Pospuesta de {$fechaAnterior->format('d/m/Y')} a {$nuevaFecha->format('d/m/Y')}" . ($motivo ? " - Motivo: {$motivo}" : "")
-        ]);
-
-        return $this;
-    }
-
-    /**
-     * Métodos estáticos para consultas comunes
-     */
-
-    /**
-     * Obtener tareas del dashboard para un usuario
-     */
-    public static function paraUsuarioHoy($usuarioId)
-    {
-        return static::with(['cliente', 'seguimiento', 'cotizacion'])
-            ->deUsuario($usuarioId)
-            ->hoy()
-            ->whereIn('estado', ['pendiente', 'en_progreso'])
-            ->orderBy('prioridad', 'desc')
-            ->orderBy('hora_estimada', 'asc') // Corregido
-            ->get();
-    }
-
-    /**
-     * Obtener carga de trabajo de un usuario
-     */
-    public static function cargaTrabajoUsuario($usuarioId, $fechaInicio = null, $fechaFin = null)
-    {
-        $query = static::deUsuario($usuarioId)
-            ->whereIn('estado', ['pendiente', 'en_progreso']);
-
-        if ($fechaInicio && $fechaFin) {
-            $query->entreFechas($fechaInicio, $fechaFin);
-        } else {
-            $query->estaSemana();
+        // Agregar motivo a metadatos si se proporciona
+        if ($motivo) {
+            $metadatos = $this->metadatos ?? [];
+            $metadatos['posposiciones'][] = [
+                'fecha_anterior' => $this->getOriginal('fecha_vencimiento'),
+                'fecha_nueva' => $nuevaFecha,
+                'motivo' => $motivo,
+                'fecha_postergacion' => Carbon::now()
+            ];
+            $this->metadatos = $metadatos;
         }
-
-        return $query->sum('duracion_estimada_minutos') ?? 0; // Corregido
-    }
-
-    /**
-     * Obtener estadísticas de tareas
-     */
-    public static function estadisticas($usuarioId = null, $fechaInicio = null, $fechaFin = null)
-    {
-        $query = static::query();
-
-        if ($usuarioId) {
-            $query->deUsuario($usuarioId);
-        }
-
-        if ($fechaInicio && $fechaFin) {
-            $query->entreFechas($fechaInicio, $fechaFin);
-        } else {
-            $query->estaSemana();
-        }
-
-        return [
-            'total' => $query->count(),
-            'pendientes' => (clone $query)->pendientes()->count(),
-            'en_progreso' => (clone $query)->enProgreso()->count(),
-            'completadas' => (clone $query)->completadas()->count(),
-            'vencidas' => (clone $query)->vencidas()->count(),
-            'hoy' => (clone $query)->hoy()->count(),
-        ];
+        
+        return $this->save();
     }
 }
